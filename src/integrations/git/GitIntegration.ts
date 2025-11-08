@@ -82,13 +82,13 @@ export class GitIntegration extends BaseModule {
           repositoryUrl: {
             name: 'repositoryUrl',
             type: 'string',
-            required: !this.isOrgWideMode,
-            description: `Repository URL${this.isOrgWideMode ? ' (optional in org-wide mode)' : ''}`,
+            required: false,
+            description: 'Repository URL (optional if using repositoryName with registry)',
           },
           repositoryName: {
             name: 'repositoryName',
             type: 'string',
-            required: this.isOrgWideMode && !this.registry,
+            required: false,
             description: 'Repository name for org-wide mode (optional if using URL)',
           },
           commitMessage: {
