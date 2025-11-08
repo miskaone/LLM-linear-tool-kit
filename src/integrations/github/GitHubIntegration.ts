@@ -80,7 +80,7 @@ export class GitHubIntegration extends BaseModule {
           repositoryName: {
             name: 'repositoryName',
             type: 'string',
-            required: this.isOrgWideMode && !this.registry,
+            required: !this.isOrgWideMode,
             description: 'Repository name for org-wide mode (optional if in registry)',
           },
           issueId: {
