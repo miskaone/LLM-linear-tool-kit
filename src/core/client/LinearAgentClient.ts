@@ -119,6 +119,27 @@ export class LinearAgentClient {
       return new CyclesModule(gql, sess);
     }, ['issues']);
 
+    // Phase 3: Code Integration and Intelligent Features
+    moduleLoader.registerModuleFactory('code', (gql, sess) => {
+      const { CodeIntegrationModule } = require('@modules/code/CodeIntegrationModule');
+      return new CodeIntegrationModule(gql, sess);
+    }, ['issues']);
+
+    moduleLoader.registerModuleFactory('intelligence', (gql, sess) => {
+      const { IntelligenceModule } = require('@modules/intelligence/IntelligenceModule');
+      return new IntelligenceModule(gql, sess);
+    }, ['issues', 'labels']);
+
+    moduleLoader.registerModuleFactory('batch', (gql, sess) => {
+      const { BatchOperationsModule } = require('@modules/batch/BatchOperationsModule');
+      return new BatchOperationsModule(gql, sess);
+    }, ['issues']);
+
+    moduleLoader.registerModuleFactory('analytics', (gql, sess) => {
+      const { AnalyticsModule } = require('@modules/analytics/AnalyticsModule');
+      return new AnalyticsModule(gql, sess);
+    }, ['issues']);
+
     // Validate dependencies
     const validation = moduleLoader.validateDependencies();
     if (!validation.valid) {
