@@ -80,7 +80,7 @@ export class GitHubIntegration extends BaseModule {
           repositoryName: {
             name: 'repositoryName',
             type: 'string',
-            required: this.isOrgWideMode && !this.registry,
+            required: !this.isOrgWideMode,
             description: 'Repository name for org-wide mode (optional if in registry)',
           },
           issueId: {
@@ -228,7 +228,7 @@ await githubModule.execute('linkPullRequestToIssue', {
   }
 
   private async linkPullRequestToIssue(params: Record<string, unknown>): Promise<{ linked: boolean }> {
-    const { prUrl, repositoryName, issueId, autoTransition = true } = params as {
+    const { prUrl, repositoryName, issueId } = params as {
       prUrl: string;
       repositoryName?: string;
       issueId: string;

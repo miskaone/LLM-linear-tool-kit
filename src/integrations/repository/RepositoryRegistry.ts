@@ -125,7 +125,7 @@ export class RepositoryRegistry {
       try {
         const response = await fetch(url, {
           headers: {
-            'Authorization': `token ${this.githubToken}`,
+            'Authorization': `Bearer ${this.githubToken}`,
             'Accept': 'application/vnd.github.v3+json',
           },
         });
