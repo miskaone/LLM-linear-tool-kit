@@ -1,0 +1,290 @@
+{
+  "name": "Linear Toolkit",
+  "version": "1.0.0",
+  "description": "Complete Linear project management toolkit with 93+ operations for creating, querying, updating, and transitioning issues. Supports both user queries and agent automation with task completion hooks.",
+  "author": "Linear Toolkit Team",
+  "api": {
+    "title": "Linear Toolkit API",
+    "description": "Comprehensive API for interacting with Linear issues and projects",
+    "version": "1.0.0"
+  },
+  "tools": [
+    {
+      "name": "query_issue",
+      "description": "Query a specific Linear issue by ID. Use this when you need to check the status, details, or any information about a specific issue.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "issue_id": {
+            "type": "string",
+            "description": "Linear issue identifier (e.g., MIS-598 or LIN-123)"
+          }
+        },
+        "required": ["issue_id"]
+      }
+    },
+    {
+      "name": "search_issues",
+      "description": "Search for Linear issues using a query string. Returns matching issues from all teams or a specific team.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Search query (keywords, issue title, etc.)"
+          },
+          "team_id": {
+            "type": "string",
+            "description": "Optional: Filter by specific team"
+          },
+          "limit": {
+            "type": "number",
+            "description": "Max results to return (default: 10)"
+          }
+        },
+        "required": ["query"]
+      }
+    },
+    {
+      "name": "get_issue_status",
+      "description": "Get the current status of an issue including state, assignee, and progress.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "issue_id": {
+            "type": "string",
+            "description": "Linear issue ID"
+          }
+        },
+        "required": ["issue_id"]
+      }
+    },
+    {
+      "name": "get_active_work",
+      "description": "Get all active work items assigned to the current user or team.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "description": "Optional: Get active work for specific user"
+          }
+        }
+      }
+    },
+    {
+      "name": "create_issue",
+      "description": "Create a new Linear issue. Provide title and description at minimum. Include team_id to assign to specific team.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "Issue title"
+          },
+          "description": {
+            "type": "string",
+            "description": "Issue description or details"
+          },
+          "team_id": {
+            "type": "string",
+            "description": "Team to create issue in"
+          },
+          "priority": {
+            "type": "number",
+            "description": "Priority level (1=Urgent, 2=High, 3=Medium, 4=Low)"
+          },
+          "assignee_id": {
+            "type": "string",
+            "description": "Optional: Assign to user"
+          }
+        },
+        "required": ["title", "description", "team_id"]
+      }
+    },
+    {
+      "name": "update_issue",
+      "description": "Update an existing issue's title, description, priority, or assignee.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "issue_id": {
+            "type": "string",
+            "description": "Issue ID to update"
+          },
+          "title": {
+            "type": "string",
+            "description": "New title (optional)"
+          },
+          "description": {
+            "type": "string",
+            "description": "New description (optional)"
+          },
+          "priority": {
+            "type": "number",
+            "description": "New priority (optional)"
+          },
+          "assignee_id": {
+            "type": "string",
+            "description": "New assignee (optional)"
+          }
+        },
+        "required": ["issue_id"]
+      }
+    },
+    {
+      "name": "add_comment",
+      "description": "Add a comment to an issue. Useful for providing updates, summaries, or additional context.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "issue_id": {
+            "type": "string",
+            "description": "Issue ID to comment on"
+          },
+          "body": {
+            "type": "string",
+            "description": "Comment text"
+          }
+        },
+        "required": ["issue_id", "body"]
+      }
+    },
+    {
+      "name": "transition_issue",
+      "description": "Move an issue to a different state (e.g., 'In Progress' → 'In Review' → 'Done').",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "issue_id": {
+            "type": "string",
+            "description": "Issue ID to transition"
+          },
+          "new_state": {
+            "type": "string",
+            "description": "Target state (e.g., 'Backlog', 'Todo', 'In Progress', 'In Review', 'Done')"
+          }
+        },
+        "required": ["issue_id", "new_state"]
+      }
+    },
+    {
+      "name": "mark_issue_done",
+      "description": "Mark an issue as complete/done. This is the primary method for closing issues.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "issue_id": {
+            "type": "string",
+            "description": "Issue ID to mark as done"
+          },
+          "summary": {
+            "type": "string",
+            "description": "Optional: Summary comment to add before marking done"
+          }
+        },
+        "required": ["issue_id"]
+      }
+    },
+    {
+      "name": "batch_update_issues",
+      "description": "Update multiple issues at once for bulk operations.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "updates": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "issue_id": {
+                  "type": "string"
+                },
+                "changes": {
+                  "type": "object",
+                  "description": "Fields to update (title, description, priority, assignee_id)"
+                }
+              },
+              "required": ["issue_id", "changes"]
+            },
+            "description": "Array of issues and their updates"
+          }
+        },
+        "required": ["updates"]
+      }
+    },
+    {
+      "name": "list_operations",
+      "description": "List all available Linear Toolkit operations organized by category. Use this to discover what operations are available.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "string",
+            "enum": ["query", "create", "update", "transition", "all"],
+            "description": "Category to list (query, create, update, transition) or 'all' for everything"
+          }
+        }
+      }
+    }
+  ],
+  "examples": [
+    {
+      "user": "What's the status of MIS-598?",
+      "description": "User wants to check issue status",
+      "steps": [
+        {
+          "tool": "query_issue",
+          "params": {
+            "issue_id": "MIS-598"
+          }
+        }
+      ]
+    },
+    {
+      "user": "Create a new issue for authentication testing",
+      "description": "User wants to create a new issue",
+      "steps": [
+        {
+          "tool": "create_issue",
+          "params": {
+            "title": "Add authentication testing",
+            "description": "Need to add comprehensive test coverage for new authentication flows",
+            "team_id": "team-123",
+            "priority": 2
+          }
+        }
+      ]
+    },
+    {
+      "user": "Search for all authentication-related issues",
+      "description": "User wants to find related issues",
+      "steps": [
+        {
+          "tool": "search_issues",
+          "params": {
+            "query": "authentication",
+            "limit": 20
+          }
+        }
+      ]
+    }
+  ],
+  "hooks": {
+    "on_task_completion": {
+      "description": "Automatically triggers when an agent completes a Linear task",
+      "behavior": "Updates Linear issue status to Done and adds completion summary as comment",
+      "configuration": ".claude/hooks/task-completion.md"
+    }
+  },
+  "context": {
+    "lazyLoading": true,
+    "description": "Operations are lazy-loaded on demand to minimize context usage. Full operation details available in linear-operations-index.json",
+    "operationIndex": "linear-operations-index.json"
+  },
+  "authentication": {
+    "type": "api_key",
+    "field": "LINEAR_API_KEY",
+    "description": "Set LINEAR_API_KEY environment variable with your Linear API key"
+  }
+}

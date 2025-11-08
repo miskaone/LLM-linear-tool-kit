@@ -1,0 +1,257 @@
+{
+  "name": "linear-advanced",
+  "version": "1.0.0",
+  "description": "Linear Toolkit - Advanced AI-powered features for intelligent project management",
+  "author": "Linear Toolkit Team",
+  "icon": "🚀",
+  "capabilities": [
+    "Code-aware issue management",
+    "Intelligent task suggestions",
+    "Duplicate detection",
+    "Batch operations",
+    "Analytics and insights",
+    "Workflow automation"
+  ],
+  "modules": {
+    "code": {
+      "description": "Code-aware operations that understand code-issue relationships",
+      "operations": [
+        {
+          "name": "mapFileToIssues",
+          "description": "Find issues related to specific code files",
+          "example": "Find all issues related to auth.ts file"
+        },
+        {
+          "name": "createFromCodeAnalysis",
+          "description": "Create issues from code analysis (bugs, security, TODOs)",
+          "example": "Create security issue for SQL injection vulnerability"
+        },
+        {
+          "name": "updateFromCommit",
+          "description": "Update issues based on commit changes",
+          "example": "Link commit abc123 to issue LIN-456"
+        },
+        {
+          "name": "findIssuesByCodePattern",
+          "description": "Find issues matching code patterns or error messages",
+          "example": "Find all issues related to 'NullPointerException'"
+        }
+      ],
+      "autoLoad": false,
+      "loadOn": ["code", "file", "commit", "analysis"]
+    },
+    "intelligence": {
+      "description": "AI-powered intelligent features for smart task management",
+      "operations": [
+        {
+          "name": "suggestNextTask",
+          "description": "Suggest most important task to work on next",
+          "example": "What should I work on next?"
+        },
+        {
+          "name": "suggestLabels",
+          "description": "Suggest labels for an issue based on content",
+          "example": "Suggest labels for issue LIN-123"
+        },
+        {
+          "name": "detectDuplicates",
+          "description": "Find potential duplicate issues",
+          "example": "Find duplicates for issue LIN-456"
+        },
+        {
+          "name": "analyzeWorkload",
+          "description": "Analyze team workload and resource allocation",
+          "example": "Check team workload balance"
+        }
+      ],
+      "autoLoad": false,
+      "loadOn": ["suggest", "analyze", "intelligence", "ai"]
+    },
+    "batch": {
+      "description": "Efficient batch operations for bulk updates",
+      "operations": [
+        {
+          "name": "batchUpdate",
+          "description": "Update multiple issues efficiently",
+          "example": "Update priority for 50 issues"
+        },
+        {
+          "name": "batchTransition",
+          "description": "Change state for multiple issues",
+          "example": "Move all sprint issues to done"
+        },
+        {
+          "name": "bulkCreate",
+          "description": "Create multiple issues efficiently",
+          "example": "Create 10 tasks for new feature"
+        },
+        {
+          "name": "bulkDelete",
+          "description": "Delete/archive multiple issues",
+          "example": "Archive completed issues from last sprint"
+        },
+        {
+          "name": "batchAddLabels",
+          "description": "Add labels to multiple issues",
+          "example": "Label 20 issues as 'bug-fix'"
+        },
+        {
+          "name": "batchRemoveLabels",
+          "description": "Remove labels from multiple issues",
+          "example": "Remove 'wip' label from completed issues"
+        },
+        {
+          "name": "batchAssign",
+          "description": "Assign multiple issues to team members",
+          "example": "Assign sprint issues to team"
+        }
+      ],
+      "autoLoad": false,
+      "loadOn": ["batch", "bulk", "multiple"]
+    },
+    "analytics": {
+      "description": "Workspace analytics and performance insights",
+      "operations": [
+        {
+          "name": "getTeamMetrics",
+          "description": "Get comprehensive metrics for a team",
+          "example": "Show team performance metrics"
+        },
+        {
+          "name": "getCycleMetrics",
+          "description": "Get metrics for a specific sprint",
+          "example": "Show sprint progress and burndown"
+        },
+        {
+          "name": "getWorkspaceMetrics",
+          "description": "Get high-level workspace metrics",
+          "example": "Show workspace health dashboard"
+        },
+        {
+          "name": "generateReport",
+          "description": "Generate comprehensive analytics report",
+          "example": "Generate monthly team report"
+        }
+      ],
+      "autoLoad": false,
+      "loadOn": ["analytics", "metrics", "report", "dashboard"]
+    }
+  },
+  "examples": {
+    "codeAwareWorkflow": {
+      "description": "Code-aware issue management workflow",
+      "steps": [
+        {
+          "action": "Load code module",
+          "code": "await linear.loadModule('code')"
+        },
+        {
+          "action": "Find issues for changed files",
+          "code": "await linear.executeModuleOperation('mapFileToIssues', { files: ['src/auth.ts'] })"
+        },
+        {
+          "action": "Create issue from security analysis",
+          "code": "await linear.executeModuleOperation('createFromCodeAnalysis', { analysis, teamId })"
+        },
+        {
+          "action": "Link commit to issues",
+          "code": "await linear.executeModuleOperation('updateFromCommit', { commitMessage, changedFiles })"
+        }
+      ]
+    },
+    "intelligentTaskManagement": {
+      "description": "AI-powered task management workflow",
+      "steps": [
+        {
+          "action": "Load intelligence module",
+          "code": "await linear.loadModule('intelligence')"
+        },
+        {
+          "action": "Get suggested next task",
+          "code": "await linear.executeModuleOperation('suggestNextTask', { limit: 3 })"
+        },
+        {
+          "action": "Suggest labels for issue",
+          "code": "await linear.executeModuleOperation('suggestLabels', { issueId: 'LIN-123' })"
+        },
+        {
+          "action": "Detect duplicates",
+          "code": "await linear.executeModuleOperation('detectDuplicates', { issueId: 'LIN-456' })"
+        }
+      ]
+    },
+    "efficientBulkOperations": {
+      "description": "Efficient batch operations workflow",
+      "steps": [
+        {
+          "action": "Load batch module",
+          "code": "await linear.loadModule('batch')"
+        },
+        {
+          "action": "Update multiple issues",
+          "code": "await linear.executeModuleOperation('batchUpdate', { updates, parallel: true })"
+        },
+        {
+          "action": "Transition sprint issues",
+          "code": "await linear.executeModuleOperation('batchTransition', { transitions })"
+        },
+        {
+          "action": "Create bulk tasks",
+          "code": "await linear.executeModuleOperation('bulkCreate', { issues })"
+        }
+      ]
+    },
+    "analyticsAndReporting": {
+      "description": "Analytics and reporting workflow",
+      "steps": [
+        {
+          "action": "Load analytics module",
+          "code": "await linear.loadModule('analytics')"
+        },
+        {
+          "action": "Get team metrics",
+          "code": "await linear.executeModuleOperation('getTeamMetrics', { teamId: 'team-123' })"
+        },
+        {
+          "action": "Get sprint metrics",
+          "code": "await linear.executeModuleOperation('getCycleMetrics', { cycleId: 'cycle-456' })"
+        },
+        {
+          "action": "Generate report",
+          "code": "await linear.executeModuleOperation('generateReport', { teamId, format: 'markdown' })"
+        }
+      ]
+    }
+  },
+  "intelligence": {
+    "aiPowered": true,
+    "features": [
+      "Natural language task suggestions",
+      "Intelligent duplicate detection",
+      "Smart label recommendations",
+      "Workload balancing suggestions",
+      "Anomaly detection",
+      "Predictive analytics"
+    ]
+  },
+  "performance": {
+    "batchSize": 50,
+    "parallelOperations": true,
+    "cacheEnabled": true,
+    "cacheHitRateTarget": 0.75,
+    "operationTimeoutMs": 30000,
+    "reportGenerationMs": 5000
+  },
+  "compatibility": {
+    "minClaudeCodeVersion": "1.0.0",
+    "supportedPlatforms": ["web", "api"],
+    "requiredModules": ["issues", "labels"],
+    "optionalModules": ["comments", "cycles"]
+  },
+  "permissions": {
+    "readIssues": true,
+    "writeIssues": true,
+    "readAnalytics": true,
+    "modifyTeamSettings": false
+  }
+}
