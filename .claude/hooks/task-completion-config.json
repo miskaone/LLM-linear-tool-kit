@@ -1,0 +1,93 @@
+{
+  "name": "Linear Task Completion Hook",
+  "version": "1.0.0",
+  "description": "Automatically updates Linear issues when task completion is detected",
+  "enabled": true,
+  "trigger": {
+    "type": "agent_response",
+    "watch_for": "completion_patterns",
+    "scope": "linear_tasks_only"
+  },
+  "completion_patterns": {
+    "direct_signals": [
+      "✅ Done",
+      "✅ Complete",
+      "✅ Finished",
+      "✅ Perfect",
+      "✅ Done!",
+      "✅ All done",
+      "task complete",
+      "task finished",
+      "completed successfully"
+    ],
+    "summary_section": {
+      "pattern": "## Summary",
+      "description": "Looks for structured summary sections in response"
+    },
+    "checklist_pattern": {
+      "pattern": "✅.*\n.*✅",
+      "description": "Detects completion checklists"
+    }
+  },
+  "validation": {
+    "require_linear_context": true,
+    "require_issue_id": true,
+    "context_path": "task.linearIssue.identifier"
+  },
+  "actions": {
+    "add_comment": {
+      "enabled": true,
+      "include_summary": true,
+      "format": "markdown"
+    },
+    "mark_done": {
+      "enabled": true,
+      "auto_transition": false,
+      "transition_to_state": "Done"
+    },
+    "provide_feedback": {
+      "enabled": true,
+      "show_issue_link": true,
+      "show_timestamp": true
+    }
+  },
+  "summary_handling": {
+    "auto_extract_from_response": true,
+    "require_explicit_summary": false,
+    "prompt_if_missing": true,
+    "prompt_text": "I detected task completion! No summary was provided. Please provide a brief summary of what was accomplished:",
+    "max_summary_length": 2000,
+    "include_bullet_points": true
+  },
+  "error_handling": {
+    "on_api_failure": "log_error_and_notify",
+    "on_missing_context": "skip_hook_and_inform_user",
+    "on_invalid_issue_id": "prompt_user_for_correction",
+    "retry_attempts": 3,
+    "retry_delay_ms": 1000
+  },
+  "customization": {
+    "allow_user_override": true,
+    "custom_comment_template": null,
+    "custom_completion_patterns": [],
+    "custom_state_mapping": {}
+  },
+  "logging": {
+    "enabled": true,
+    "log_level": "info",
+    "log_all_triggers": false,
+    "log_all_updates": true
+  },
+  "extensions": {
+    "future_pr_support": {
+      "enabled": false,
+      "trigger_pattern": "🚀 PR is ready",
+      "description": "Auto-link PR and transition issue to review"
+    },
+    "future_subtask_support": {
+      "enabled": false,
+      "trigger_pattern": "✅ Subtask completed",
+      "description": "Mark individual subtasks as done"
+    }
+  }
+}

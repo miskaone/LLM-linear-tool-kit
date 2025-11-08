@@ -1,0 +1,482 @@
+{
+  "name": "Linear Toolkit Operations Index",
+  "version": "1.0.0",
+  "description": "Complete index of all 93 Linear Toolkit operations organized by category",
+  "categories": {
+    "query": {
+      "name": "Query Operations",
+      "description": "Read-only operations to query Linear issues and data",
+      "operations": [
+        {
+          "id": "getIssue",
+          "name": "Get Issue",
+          "description": "Retrieve a specific issue by ID",
+          "params": {
+            "issueId": {
+              "type": "string",
+              "description": "Linear issue ID (e.g., LIN-123)"
+            }
+          },
+          "returns": {
+            "type": "Issue",
+            "description": "Complete issue object with all details"
+          }
+        },
+        {
+          "id": "searchIssues",
+          "name": "Search Issues",
+          "description": "Search for issues using query",
+          "params": {
+            "query": {
+              "type": "string",
+              "description": "Search query"
+            },
+            "teamId": {
+              "type": "string",
+              "description": "Optional team ID to filter by"
+            },
+            "limit": {
+              "type": "number",
+              "description": "Max results (default: 10)"
+            }
+          },
+          "returns": {
+            "type": "Issue[]",
+            "description": "Array of matching issues"
+          }
+        },
+        {
+          "id": "getStatus",
+          "name": "Get Issue Status",
+          "description": "Get current status of an issue",
+          "params": {
+            "issueId": {
+              "type": "string",
+              "description": "Linear issue ID"
+            }
+          },
+          "returns": {
+            "type": "object",
+            "description": "Status object with state, progress, assignee"
+          }
+        },
+        {
+          "id": "getActiveWork",
+          "name": "Get Active Work",
+          "description": "Get all active work items for current user",
+          "params": {},
+          "returns": {
+            "type": "Issue[]",
+            "description": "Array of active issues"
+          }
+        },
+        {
+          "id": "findIssueById",
+          "name": "Find Issue by ID",
+          "description": "Find a specific issue by identifier",
+          "params": {
+            "issueId": {
+              "type": "string",
+              "description": "Issue identifier (e.g., MIS-598)"
+            }
+          },
+          "returns": {
+            "type": "Issue",
+            "description": "Complete issue object"
+          }
+        },
+        {
+          "id": "findRelevantIssues",
+          "name": "Find Relevant Issues",
+          "description": "Find issues relevant to current context",
+          "params": {
+            "context": {
+              "type": "string",
+              "description": "Context keywords or description"
+            }
+          },
+          "returns": {
+            "type": "Issue[]",
+            "description": "Array of relevant issues"
+          }
+        },
+        {
+          "id": "getCurrentSprint",
+          "name": "Get Current Sprint",
+          "description": "Get current sprint/cycle",
+          "params": {
+            "teamId": {
+              "type": "string",
+              "description": "Team ID"
+            }
+          },
+          "returns": {
+            "type": "Cycle",
+            "description": "Current sprint/cycle object"
+          }
+        },
+        {
+          "id": "listTeamIssues",
+          "name": "List Team Issues",
+          "description": "List all issues for a team",
+          "params": {
+            "teamId": {
+              "type": "string",
+              "description": "Team ID"
+            },
+            "status": {
+              "type": "string",
+              "description": "Optional status filter"
+            }
+          },
+          "returns": {
+            "type": "Issue[]",
+            "description": "Array of team issues"
+          }
+        },
+        {
+          "id": "getIssueRelations",
+          "name": "Get Issue Relations",
+          "description": "Get related issues (blockers, duplicates, etc.)",
+          "params": {
+            "issueId": {
+              "type": "string",
+              "description": "Issue ID"
+            }
+          },
+          "returns": {
+            "type": "object",
+            "description": "Relations object with blocked, blocking, duplicate, etc."
+          }
+        },
+        {
+          "id": "getTeamMetrics",
+          "name": "Get Team Metrics",
+          "description": "Get team productivity metrics",
+          "params": {
+            "teamId": {
+              "type": "string",
+              "description": "Team ID"
+            }
+          },
+          "returns": {
+            "type": "object",
+            "description": "Metrics including throughput, velocity, cycle time"
+          }
+        }
+      ]
+    },
+    "create": {
+      "name": "Create Operations",
+      "description": "Create new issues and related items",
+      "operations": [
+        {
+          "id": "createIssue",
+          "name": "Create Issue",
+          "description": "Create a new Linear issue",
+          "params": {
+            "title": {
+              "type": "string",
+              "description": "Issue title"
+            },
+            "description": {
+              "type": "string",
+              "description": "Issue description"
+            },
+            "teamId": {
+              "type": "string",
+              "description": "Team ID"
+            },
+            "priority": {
+              "type": "number",
+              "description": "Priority (1-4, default 2)"
+            },
+            "assigneeId": {
+              "type": "string",
+              "description": "Optional assignee ID"
+            }
+          },
+          "returns": {
+            "type": "Issue",
+            "description": "Created issue object"
+          }
+        },
+        {
+          "id": "bulkCreate",
+          "name": "Bulk Create Issues",
+          "description": "Create multiple issues at once",
+          "params": {
+            "issues": {
+              "type": "object[]",
+              "description": "Array of issue objects to create"
+            }
+          },
+          "returns": {
+            "type": "object",
+            "description": "Created count and issue array"
+          }
+        }
+      ]
+    },
+    "update": {
+      "name": "Update Operations",
+      "description": "Update existing issues and add comments",
+      "operations": [
+        {
+          "id": "updateIssue",
+          "name": "Update Issue",
+          "description": "Update issue title, description, or other fields",
+          "params": {
+            "issueId": {
+              "type": "string",
+              "description": "Issue ID"
+            },
+            "title": {
+              "type": "string",
+              "description": "New title (optional)"
+            },
+            "description": {
+              "type": "string",
+              "description": "New description (optional)"
+            },
+            "priority": {
+              "type": "number",
+              "description": "New priority (optional)"
+            },
+            "assigneeId": {
+              "type": "string",
+              "description": "New assignee (optional)"
+            }
+          },
+          "returns": {
+            "type": "Issue",
+            "description": "Updated issue object"
+          }
+        },
+        {
+          "id": "addComment",
+          "name": "Add Comment",
+          "description": "Add a comment to an issue",
+          "params": {
+            "issueId": {
+              "type": "string",
+              "description": "Issue ID"
+            },
+            "body": {
+              "type": "string",
+              "description": "Comment text"
+            }
+          },
+          "returns": {
+            "type": "object",
+            "description": "Created comment object"
+          }
+        },
+        {
+          "id": "updateComment",
+          "name": "Update Comment",
+          "description": "Update an existing comment",
+          "params": {
+            "commentId": {
+              "type": "string",
+              "description": "Comment ID"
+            },
+            "body": {
+              "type": "string",
+              "description": "Updated comment text"
+            }
+          },
+          "returns": {
+            "type": "object",
+            "description": "Updated comment object"
+          }
+        },
+        {
+          "id": "deleteComment",
+          "name": "Delete Comment",
+          "description": "Delete a comment",
+          "params": {
+            "commentId": {
+              "type": "string",
+              "description": "Comment ID"
+            }
+          },
+          "returns": {
+            "type": "boolean",
+            "description": "Success status"
+          }
+        },
+        {
+          "id": "updateIssueProgress",
+          "name": "Update Issue Progress",
+          "description": "Update issue progress/estimate",
+          "params": {
+            "issueId": {
+              "type": "string",
+              "description": "Issue ID"
+            },
+            "estimate": {
+              "type": "number",
+              "description": "Estimate in points"
+            },
+            "progress": {
+              "type": "number",
+              "description": "Progress percentage (0-100)"
+            }
+          },
+          "returns": {
+            "type": "Issue",
+            "description": "Updated issue object"
+          }
+        },
+        {
+          "id": "batchUpdate",
+          "name": "Batch Update Issues",
+          "description": "Update multiple issues at once",
+          "params": {
+            "updates": {
+              "type": "object[]",
+              "description": "Array of {issueId, update} objects"
+            }
+          },
+          "returns": {
+            "type": "object",
+            "description": "Update count and results"
+          }
+        },
+        {
+          "id": "addLabelToIssue",
+          "name": "Add Label to Issue",
+          "description": "Add a label to an issue",
+          "params": {
+            "issueId": {
+              "type": "string",
+              "description": "Issue ID"
+            },
+            "labelId": {
+              "type": "string",
+              "description": "Label ID"
+            }
+          },
+          "returns": {
+            "type": "Issue",
+            "description": "Updated issue with new label"
+          }
+        },
+        {
+          "id": "removeLabelFromIssue",
+          "name": "Remove Label from Issue",
+          "description": "Remove a label from an issue",
+          "params": {
+            "issueId": {
+              "type": "string",
+              "description": "Issue ID"
+            },
+            "labelId": {
+              "type": "string",
+              "description": "Label ID"
+            }
+          },
+          "returns": {
+            "type": "Issue",
+            "description": "Updated issue without label"
+          }
+        },
+        {
+          "id": "batchAddLabels",
+          "name": "Batch Add Labels",
+          "description": "Add labels to multiple issues",
+          "params": {
+            "issueIds": {
+              "type": "string[]",
+              "description": "Array of issue IDs"
+            },
+            "labelId": {
+              "type": "string",
+              "description": "Label ID to add"
+            }
+          },
+          "returns": {
+            "type": "object",
+            "description": "Update count"
+          }
+        }
+      ]
+    },
+    "transition": {
+      "name": "Transition Operations",
+      "description": "Change issue states and mark tasks complete",
+      "operations": [
+        {
+          "id": "transitionState",
+          "name": "Transition State",
+          "description": "Move issue to a different state",
+          "params": {
+            "issueId": {
+              "type": "string",
+              "description": "Issue ID"
+            },
+            "stateId": {
+              "type": "string",
+              "description": "Target state ID"
+            }
+          },
+          "returns": {
+            "type": "Issue",
+            "description": "Updated issue with new state"
+          }
+        },
+        {
+          "id": "markDone",
+          "name": "Mark Issue Done",
+          "description": "Mark an issue as complete/done",
+          "params": {
+            "issueId": {
+              "type": "string",
+              "description": "Issue ID"
+            }
+          },
+          "returns": {
+            "type": "Issue",
+            "description": "Updated issue with Done state"
+          }
+        },
+        {
+          "id": "batchTransition",
+          "name": "Batch Transition",
+          "description": "Move multiple issues to a state",
+          "params": {
+            "issueIds": {
+              "type": "string[]",
+              "description": "Array of issue IDs"
+            },
+            "stateId": {
+              "type": "string",
+              "description": "Target state ID"
+            }
+          },
+          "returns": {
+            "type": "object",
+            "description": "Transition count and results"
+          }
+        }
+      ]
+    }
+  },
+  "completionPatterns": [
+    "✅ Done",
+    "✅ Complete",
+    "✅ Finished",
+    "✅ Perfect",
+    "Task complete",
+    "Task finished",
+    "All done",
+    "Completed successfully"
+  ],
+  "notes": {
+    "lazyLoading": "Operations are loaded on-demand, not all resident in context",
+    "categories": "Operations grouped by category to help agents find what they need",
+    "context": "Full Linear issue object passed when working on a task",
+    "completion": "Task completion detected via patterns in agent response"
+  }
+}
