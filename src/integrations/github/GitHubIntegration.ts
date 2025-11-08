@@ -1,11 +1,16 @@
 /**
  * GitHub Integration for Linear Toolkit
  * Syncs Pull Requests with Linear issues
+ *
+ * Supports two modes:
+ * 1. Organization-wide mode: Uses RepositoryRegistry for automatic repo discovery
+ * 2. Per-repo mode: Explicit repositoryUrl specified per operation
  */
 
 import { BaseModule } from '@modules/BaseModule';
 import { GraphQLClient } from '@core/client/GraphQLClient';
 import { SessionManager } from '@core/client/SessionManager';
+import { RepositoryRegistry } from '@integrations/repository/RepositoryRegistry';
 
 export interface PullRequest {
   id: string;
@@ -30,7 +35,14 @@ export interface ReviewComment {
 }
 
 export class GitHubIntegration extends BaseModule {
-  constructor(graphqlClient: GraphQLClient, session: SessionManager) {
+  private registry?: RepositoryRegistry;
+  private isOrgWideMode: boolean;
+
+  constructor(
+    graphqlClient: GraphQLClient,
+    session: SessionManager,
+    registry?: RepositoryRegistry
+  ) {
     super(
       'github',
       {
@@ -49,6 +61,8 @@ export class GitHubIntegration extends BaseModule {
       graphqlClient,
       session
     );
+    this.registry = registry;
+    this.isOrgWideMode = !!registry;
   }
 
   protected setupOperations(): void {
@@ -62,6 +76,12 @@ export class GitHubIntegration extends BaseModule {
             type: 'string',
             required: true,
             description: 'GitHub PR URL',
+          },
+          repositoryName: {
+            name: 'repositoryName',
+            type: 'string',
+            required: !this.isOrgWideMode,
+            description: 'Repository name for org-wide mode (optional if in registry)',
           },
           issueId: {
             name: 'issueId',
@@ -78,6 +98,15 @@ export class GitHubIntegration extends BaseModule {
         },
         this.linkPullRequestToIssue.bind(this),
         `
+// Organization-wide mode:
+await githubModule.execute('linkPullRequestToIssue', {
+  prUrl: 'https://github.com/org/repo/pull/123',
+  repositoryName: 'repo',
+  issueId: 'LIN-456',
+  autoTransition: true
+});
+
+// Per-repo mode:
 await githubModule.execute('linkPullRequestToIssue', {
   prUrl: 'https://github.com/org/repo/pull/123',
   issueId: 'LIN-456',
@@ -199,13 +228,22 @@ await githubModule.execute('linkPullRequestToIssue', {
   }
 
   private async linkPullRequestToIssue(params: Record<string, unknown>): Promise<{ linked: boolean }> {
-    const { prUrl, issueId, autoTransition = true } = params as {
+    const { prUrl, repositoryName, issueId } = params as {
       prUrl: string;
+      repositoryName?: string;
       issueId: string;
       autoTransition?: boolean;
     };
 
     try {
+      // Resolve repository URL based on mode (optional for this operation)
+      if (this.isOrgWideMode && repositoryName && this.registry) {
+        const repo = this.registry.getRepository(repositoryName);
+        if (!repo) {
+          this.logger.warn(`Repository '${repositoryName}' not found in registry, proceeding with PR URL`);
+        }
+      }
+
       // TODO: Extract PR info from URL
       // TODO: Add link as comment to Linear issue
       // TODO: Auto-transition if enabled
