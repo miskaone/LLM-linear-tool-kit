@@ -82,6 +82,34 @@ const ToolkitConfigSchema = z.object({
     .positive()
     .default(3600)
     .describe('Session cache TTL in seconds'),
+
+  // GitHub integration configuration for organization-wide mode
+  github: z
+    .object({
+      org: z
+        .string()
+        .min(1, 'GitHub organization name is required for org-wide mode')
+        .optional()
+        .describe('GitHub organization name for auto-discovery'),
+      token: z
+        .string()
+        .min(1, 'GitHub personal access token is required for org-wide mode')
+        .optional()
+        .describe('GitHub personal access token for API access'),
+      cacheTTL: z
+        .number()
+        .positive()
+        .default(3600000)
+        .describe('Repository cache TTL in milliseconds (default: 1 hour)'),
+    })
+    .optional()
+    .describe('GitHub integration configuration'),
+
+  // Deployment mode configuration
+  deploymentMode: z
+    .enum(['org-wide', 'per-repo'])
+    .default('per-repo')
+    .describe('Deployment mode: org-wide (auto-discover repos) or per-repo (explicit URLs)'),
 });
 
 export type ToolkitConfig = z.infer<typeof ToolkitConfigSchema>;
@@ -118,6 +146,16 @@ export function loadConfig(): ToolkitConfig {
     },
     sessionPersistence: (process.env.SESSION_PERSISTENCE as 'memory' | 'disk' | 'redis') || 'memory',
     sessionCacheTTL: process.env.SESSION_CACHE_TTL ? parseInt(process.env.SESSION_CACHE_TTL) : undefined,
+    // GitHub integration configuration
+    github:
+      process.env.GITHUB_ORG && process.env.GITHUB_TOKEN
+        ? {
+            org: process.env.GITHUB_ORG,
+            token: process.env.GITHUB_TOKEN,
+            cacheTTL: process.env.REPO_CACHE_TTL ? parseInt(process.env.REPO_CACHE_TTL) : undefined,
+          }
+        : undefined,
+    deploymentMode: (process.env.DEPLOYMENT_MODE as 'org-wide' | 'per-repo') || undefined,
   };
 
   // Remove undefined values to allow schema defaults

@@ -226,6 +226,76 @@
           }
         }
       }
+    },
+    {
+      "name": "list_repositories",
+      "description": "List all repositories in the organization. Requires organization-wide mode to be enabled. Returns repository names, URLs, language, and last update time.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "filter": {
+            "type": "string",
+            "enum": ["active", "archived", "all"],
+            "description": "Filter repositories by status (default: active)"
+          },
+          "limit": {
+            "type": "number",
+            "description": "Maximum number of repositories to return"
+          }
+        }
+      }
+    },
+    {
+      "name": "search_repositories",
+      "description": "Search repositories by name or description. Supports filtering by programming language.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Search query (repository name or description keywords)"
+          },
+          "language": {
+            "type": "string",
+            "description": "Optional: Filter by programming language (e.g., typescript, python, go)"
+          },
+          "limit": {
+            "type": "number",
+            "description": "Maximum results to return"
+          }
+        },
+        "required": ["query"]
+      }
+    },
+    {
+      "name": "get_repository_info",
+      "description": "Get detailed information about a specific repository including languages, stars, forks, and recent activity.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "repo_name": {
+            "type": "string",
+            "description": "Repository name (e.g., 'backend', 'frontend')"
+          }
+        },
+        "required": ["repo_name"]
+      }
+    },
+    {
+      "name": "get_repository_stats",
+      "description": "Get organization-wide repository statistics including total repos, languages used, and cache age.",
+      "input_schema": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "get_languages",
+      "description": "Get a list of all programming languages used across repositories in the organization.",
+      "input_schema": {
+        "type": "object",
+        "properties": {}
+      }
     }
   ],
   "examples": [
@@ -266,6 +336,42 @@
             "query": "authentication",
             "limit": 20
           }
+        }
+      ]
+    },
+    {
+      "user": "What repositories do we have?",
+      "description": "User wants to list organization repositories",
+      "steps": [
+        {
+          "tool": "list_repositories",
+          "params": {
+            "filter": "active",
+            "limit": 20
+          }
+        }
+      ]
+    },
+    {
+      "user": "Find all TypeScript repositories",
+      "description": "User wants to find repos using a specific language",
+      "steps": [
+        {
+          "tool": "search_repositories",
+          "params": {
+            "query": "TypeScript",
+            "language": "typescript"
+          }
+        }
+      ]
+    },
+    {
+      "user": "Get repository statistics for our organization",
+      "description": "User wants to see org-wide repo stats",
+      "steps": [
+        {
+          "tool": "get_repository_stats",
+          "params": {}
         }
       ]
     }

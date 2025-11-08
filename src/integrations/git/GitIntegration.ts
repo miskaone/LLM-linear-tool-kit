@@ -1,11 +1,16 @@
 /**
  * Git Integration for Linear Toolkit
  * Monitors git repositories and automatically updates Linear issues
+ *
+ * Supports two modes:
+ * 1. Organization-wide mode: Uses RepositoryRegistry for automatic repo discovery
+ * 2. Per-repo mode: Explicit repositoryUrl specified per operation
  */
 
 import { BaseModule } from '@modules/BaseModule';
 import { GraphQLClient } from '@core/client/GraphQLClient';
 import { SessionManager } from '@core/client/SessionManager';
+import { RepositoryRegistry } from '@integrations/repository/RepositoryRegistry';
 
 export interface CommitInfo {
   hash: string;
@@ -32,7 +37,14 @@ export interface RepositoryInfo {
 }
 
 export class GitIntegration extends BaseModule {
-  constructor(graphqlClient: GraphQLClient, session: SessionManager) {
+  private registry?: RepositoryRegistry;
+  private isOrgWideMode: boolean;
+
+  constructor(
+    graphqlClient: GraphQLClient,
+    session: SessionManager,
+    registry?: RepositoryRegistry
+  ) {
     super(
       'git',
       {
@@ -51,6 +63,8 @@ export class GitIntegration extends BaseModule {
       graphqlClient,
       session
     );
+    this.registry = registry;
+    this.isOrgWideMode = !!registry;
   }
 
   protected setupOperations(): void {
@@ -68,8 +82,14 @@ export class GitIntegration extends BaseModule {
           repositoryUrl: {
             name: 'repositoryUrl',
             type: 'string',
-            required: true,
-            description: 'Repository URL',
+            required: !this.isOrgWideMode,
+            description: `Repository URL${this.isOrgWideMode ? ' (optional in org-wide mode)' : ''}`,
+          },
+          repositoryName: {
+            name: 'repositoryName',
+            type: 'string',
+            required: this.isOrgWideMode && !this.registry,
+            description: 'Repository name for org-wide mode (optional if using URL)',
           },
           commitMessage: {
             name: 'commitMessage',
@@ -86,6 +106,15 @@ export class GitIntegration extends BaseModule {
         },
         this.linkCommitToIssues.bind(this),
         `
+// Organization-wide mode (with repository registry):
+await gitModule.execute('linkCommitToIssues', {
+  commitHash: 'abc123',
+  repositoryName: 'backend',
+  commitMessage: 'Fix auth - closes LIN-123',
+  files: ['src/auth.ts']
+});
+
+// Per-repo mode (explicit URL):
 await gitModule.execute('linkCommitToIssues', {
   commitHash: 'abc123',
   repositoryUrl: 'https://github.com/org/repo',
@@ -202,14 +231,30 @@ await gitModule.execute('linkCommitToIssues', {
   }
 
   private async linkCommitToIssues(params: Record<string, unknown>): Promise<{ linked: number; issues: string[] }> {
-    const { commitHash, repositoryUrl, commitMessage, files } = params as {
+    const { commitHash, repositoryUrl, repositoryName, commitMessage, files } = params as {
       commitHash: string;
-      repositoryUrl: string;
+      repositoryUrl?: string;
+      repositoryName?: string;
       commitMessage: string;
       files: string[];
     };
 
     try {
+      // Resolve repository URL based on mode
+      let repoUrl = repositoryUrl;
+
+      if (!repoUrl && this.isOrgWideMode && repositoryName && this.registry) {
+        const repo = this.registry.getRepository(repositoryName);
+        if (!repo) {
+          throw new Error(`Repository '${repositoryName}' not found in registry`);
+        }
+        repoUrl = repo.url;
+      }
+
+      if (!repoUrl) {
+        throw new Error('Either repositoryUrl or repositoryName (with registry) must be provided');
+      }
+
       // Extract issue IDs from commit message
       const issuePattern = /\b[A-Z]+-\d+\b/g;
       const issueIds = commitMessage.match(issuePattern) || [];
@@ -221,7 +266,7 @@ await gitModule.execute('linkCommitToIssues', {
         linked++;
       }
 
-      this.logger.info(`Linked commit ${commitHash} to ${linked} issues`);
+      this.logger.info(`Linked commit ${commitHash} to ${linked} issues in ${repoUrl}`);
       return { linked, issues: issueIds };
     } catch (error) {
       this.logger.error('Failed to link commit to issues', error);
