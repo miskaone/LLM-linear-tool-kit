@@ -24,6 +24,7 @@ import {
 } from '@types/linear.types';
 import { SessionManager } from './SessionManager';
 import { GraphQLClient, GraphQLClientConfig } from './GraphQLClient';
+import { ModuleLoader } from '@modules/ModuleLoader';
 import { getLogger } from '@utils/logger';
 import { loadConfig } from '@utils/config';
 import { getCache } from '@utils/cache';
@@ -32,14 +33,20 @@ export class LinearAgentClient {
   private config: ToolkitConfig;
   private session: SessionManager;
   private graphqlClient: GraphQLClient;
+  private moduleLoader: ModuleLoader;
   private logger = getLogger('LinearAgentClient');
   private cache = getCache();
-  private moduleMap: Map<string, unknown> = new Map();
 
-  private constructor(config: ToolkitConfig, session: SessionManager, graphqlClient: GraphQLClient) {
+  private constructor(
+    config: ToolkitConfig,
+    session: SessionManager,
+    graphqlClient: GraphQLClient,
+    moduleLoader: ModuleLoader
+  ) {
     this.config = config;
     this.session = session;
     this.graphqlClient = graphqlClient;
+    this.moduleLoader = moduleLoader;
     this.logger.debug('LinearAgentClient initialized');
   }
 
@@ -88,8 +95,39 @@ export class LinearAgentClient {
 
     const graphqlClient = new GraphQLClient(graphqlConfig);
 
+    // Create module loader and register module factories
+    const moduleLoader = new ModuleLoader(graphqlClient, session);
+
+    // Register module factories
+    moduleLoader.registerModuleFactory('issues', (gql, sess) => {
+      const { IssuesModule } = require('@modules/issues/IssuesModule');
+      return new IssuesModule(gql, sess);
+    });
+
+    moduleLoader.registerModuleFactory('comments', (gql, sess) => {
+      const { CommentsModule } = require('@modules/comments/CommentsModule');
+      return new CommentsModule(gql, sess);
+    }, ['issues']);
+
+    moduleLoader.registerModuleFactory('labels', (gql, sess) => {
+      const { LabelsModule } = require('@modules/labels/LabelsModule');
+      return new LabelsModule(gql, sess);
+    }, ['issues']);
+
+    moduleLoader.registerModuleFactory('cycles', (gql, sess) => {
+      const { CyclesModule } = require('@modules/cycles/CyclesModule');
+      return new CyclesModule(gql, sess);
+    }, ['issues']);
+
+    // Validate dependencies
+    const validation = moduleLoader.validateDependencies();
+    if (!validation.valid) {
+      logger.error('Module dependency validation failed', validation.errors);
+      throw new Error(`Module dependency validation failed: ${validation.errors.join('; ')}`);
+    }
+
     logger.info('LinearAgentClient created successfully');
-    return new LinearAgentClient(config, session, graphqlClient);
+    return new LinearAgentClient(config, session, graphqlClient, moduleLoader);
   }
 
   /**
@@ -97,6 +135,51 @@ export class LinearAgentClient {
    */
   getSession(): SessionManager {
     return this.session;
+  }
+
+  /**
+   * Get the module loader
+   */
+  getModuleLoader(): ModuleLoader {
+    return this.moduleLoader;
+  }
+
+  /**
+   * Load a module by name
+   * @param moduleName - Name of the module to load (e.g., 'issues', 'comments', 'labels', 'cycles')
+   */
+  async loadModule(moduleName: string) {
+    return this.moduleLoader.loadModule(moduleName);
+  }
+
+  /**
+   * Load multiple modules at once
+   */
+  async loadModules(moduleNames: string[]): Promise<Map<string, any>> {
+    return this.moduleLoader.loadModules(moduleNames);
+  }
+
+  /**
+   * Check if a module is loaded
+   */
+  isModuleLoaded(moduleName: string): boolean {
+    return this.moduleLoader.isModuleLoaded(moduleName);
+  }
+
+  /**
+   * Get all loaded modules
+   */
+  getLoadedModules(): Map<string, any> {
+    return this.moduleLoader.getLoadedModules();
+  }
+
+  /**
+   * Execute an operation in a loaded module
+   * @param operationName - Name of the operation to execute
+   * @param params - Parameters for the operation
+   */
+  async executeModuleOperation(operationName: string, params: Record<string, unknown>): Promise<unknown> {
+    return this.moduleLoader.executeOperation(operationName, params);
   }
 
   /**

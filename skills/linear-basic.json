@@ -1,0 +1,270 @@
+{
+  "name": "linear-basic",
+  "version": "1.0.0",
+  "description": "Linear Toolkit - Basic operations for project management",
+  "author": "Linear Toolkit Team",
+  "icon": "📋",
+  "capabilities": [
+    "Issue management",
+    "Comment operations",
+    "Sprint/cycle management",
+    "Label management"
+  ],
+  "configuration": {
+    "required": {
+      "LINEAR_API_KEY": {
+        "type": "string",
+        "description": "Linear API authentication key"
+      }
+    },
+    "optional": {
+      "CACHE_ENABLED": {
+        "type": "boolean",
+        "default": true,
+        "description": "Enable caching for improved performance"
+      },
+      "CACHE_TTL": {
+        "type": "number",
+        "default": 300,
+        "description": "Cache time-to-live in seconds"
+      },
+      "LOG_LEVEL": {
+        "type": "string",
+        "enum": ["debug", "info", "warn", "error"],
+        "default": "info",
+        "description": "Logging level"
+      }
+    }
+  },
+  "modules": {
+    "issues": {
+      "description": "Core issue management operations",
+      "operations": [
+        {
+          "name": "getIssueById",
+          "description": "Get a single issue by ID",
+          "example": "Get issue LIN-123 details"
+        },
+        {
+          "name": "searchIssues",
+          "description": "Search for issues using a query",
+          "example": "Search for authentication issues"
+        },
+        {
+          "name": "createIssue",
+          "description": "Create a new issue",
+          "example": "Create a bug fix issue"
+        },
+        {
+          "name": "updateIssue",
+          "description": "Update an existing issue",
+          "example": "Update issue priority"
+        },
+        {
+          "name": "deleteIssue",
+          "description": "Delete/archive an issue",
+          "example": "Archive a completed issue"
+        },
+        {
+          "name": "listTeamIssues",
+          "description": "List all issues in a team",
+          "example": "Get all team issues"
+        },
+        {
+          "name": "listCycleIssues",
+          "description": "List issues in a cycle/sprint",
+          "example": "Get sprint backlog"
+        },
+        {
+          "name": "getIssuesByLabel",
+          "description": "Get issues with specific labels",
+          "example": "Get all bugs"
+        },
+        {
+          "name": "getIssueRelations",
+          "description": "Get dependencies for an issue",
+          "example": "Get blocking issues"
+        },
+        {
+          "name": "bulkUpdateIssues",
+          "description": "Update multiple issues at once",
+          "example": "Update priorities for multiple issues"
+        }
+      ],
+      "autoLoad": true
+    },
+    "comments": {
+      "description": "Issue comment operations",
+      "operations": [
+        {
+          "name": "addComment",
+          "description": "Add a comment to an issue",
+          "example": "Add a progress update comment"
+        },
+        {
+          "name": "updateComment",
+          "description": "Update an existing comment",
+          "example": "Correct a comment typo"
+        },
+        {
+          "name": "deleteComment",
+          "description": "Delete a comment",
+          "example": "Remove a comment"
+        },
+        {
+          "name": "getIssueComments",
+          "description": "Get all comments for an issue",
+          "example": "Get discussion history"
+        }
+      ],
+      "autoLoad": false,
+      "loadOn": ["comment", "update"]
+    },
+    "labels": {
+      "description": "Label management operations",
+      "operations": [
+        {
+          "name": "getLabel",
+          "description": "Get label details",
+          "example": "Get label information"
+        },
+        {
+          "name": "listTeamLabels",
+          "description": "List all labels in a team",
+          "example": "Get all labels"
+        },
+        {
+          "name": "createLabel",
+          "description": "Create a new label",
+          "example": "Create a priority label"
+        },
+        {
+          "name": "updateLabel",
+          "description": "Update a label",
+          "example": "Change label color"
+        },
+        {
+          "name": "deleteLabel",
+          "description": "Delete a label",
+          "example": "Remove unused label"
+        },
+        {
+          "name": "addLabelToIssue",
+          "description": "Add a label to an issue",
+          "example": "Mark issue as bug"
+        },
+        {
+          "name": "removeLabelFromIssue",
+          "description": "Remove a label from an issue",
+          "example": "Remove priority label"
+        }
+      ],
+      "autoLoad": false,
+      "loadOn": ["label", "tag"]
+    },
+    "cycles": {
+      "description": "Sprint/Cycle management operations",
+      "operations": [
+        {
+          "name": "getCurrentCycle",
+          "description": "Get the active sprint/cycle",
+          "example": "Get current sprint"
+        },
+        {
+          "name": "getCycleById",
+          "description": "Get a specific cycle",
+          "example": "Get cycle details"
+        },
+        {
+          "name": "listTeamCycles",
+          "description": "List all cycles in a team",
+          "example": "Get all sprints"
+        },
+        {
+          "name": "createCycle",
+          "description": "Create a new cycle",
+          "example": "Create a new sprint"
+        },
+        {
+          "name": "updateCycle",
+          "description": "Update a cycle",
+          "example": "Change sprint dates"
+        },
+        {
+          "name": "getCycleIssues",
+          "description": "Get issues in a cycle",
+          "example": "Get sprint issues"
+        },
+        {
+          "name": "addIssueToCycle",
+          "description": "Add an issue to a cycle",
+          "example": "Add issue to sprint"
+        },
+        {
+          "name": "removeIssueFromCycle",
+          "description": "Remove an issue from a cycle",
+          "example": "Remove from sprint"
+        },
+        {
+          "name": "closeCycle",
+          "description": "Complete/close a cycle",
+          "example": "End sprint"
+        }
+      ],
+      "autoLoad": false,
+      "loadOn": ["sprint", "cycle", "iteration"]
+    }
+  },
+  "examples": {
+    "basicWorkflow": {
+      "description": "Basic workflow to manage an issue",
+      "steps": [
+        {
+          "action": "Load issues module",
+          "code": "await linear.loadModule('issues')"
+        },
+        {
+          "action": "Find an issue",
+          "code": "await linear.executeModuleOperation('getIssueById', { issueId: 'LIN-123' })"
+        },
+        {
+          "action": "Load comments module",
+          "code": "await linear.loadModule('comments')"
+        },
+        {
+          "action": "Add a comment",
+          "code": "await linear.executeModuleOperation('addComment', { issueId: 'LIN-123', body: 'Working on this...' })"
+        }
+      ]
+    },
+    "sprintManagement": {
+      "description": "Manage a sprint and its issues",
+      "steps": [
+        {
+          "action": "Load cycles module",
+          "code": "await linear.loadModule('cycles')"
+        },
+        {
+          "action": "Get current sprint",
+          "code": "await linear.executeModuleOperation('getCurrentCycle', {})"
+        },
+        {
+          "action": "Get sprint issues",
+          "code": "await linear.executeModuleOperation('getCycleIssues', { cycleId: 'cycle-123' })"
+        }
+      ]
+    }
+  },
+  "performance": {
+    "cachingEnabled": true,
+    "cacheHitRateTarget": 0.7,
+    "operationTimeoutMs": 30000,
+    "maxConcurrentOperations": 10,
+    "batchOperationMaxSize": 100
+  },
+  "compatibility": {
+    "minClaudeCodeVersion": "1.0.0",
+    "supportedPlatforms": ["web", "api"],
+    "apiVersions": ["1.0"]
+  }
+}
