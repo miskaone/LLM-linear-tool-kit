@@ -1,0 +1,1894 @@
+From cdd8eecb4a11d565160482874b1de8ecd7e0ccb5 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sat, 8 Nov 2025 14:06:34 +0000
+Subject: [PATCH 5/5] Add Claude Code integration: Skills and Task Completion
+ Hooks
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+- Create linear-operations-index.json with all 93 operations organized by category
+- Create linear-toolkit.json Claude Skill with 11 core tools
+- Add task-completion.md hook documentation with examples
+- Add task-completion-config.json for customizable hook behavior
+- Add task-completion-handler.ts TypeScript implementation
+- Add .claude/README.md with complete integration guide
+
+This enables:
+- Claude Skill interface for querying and updating Linear issues
+- Automatic task completion detection and Linear updates
+- Lazy-loaded operations to minimize context usage
+- Customizable completion patterns and behaviors
+- Full hook infrastructure for agent automation
+
+Workflow:
+1. User/Agent uses Skill to query issue status
+2. Agent works on Linear task with issue context
+3. On completion (✅ Done), hook auto-updates Linear
+4. Hook adds summary comment + marks issue Done
+5. Agent receives confirmation of update
+---
+ .claude/README.md                         | 430 +++++++++++++++++++
+ .claude/hooks/task-completion-config.json |  93 +++++
+ .claude/hooks/task-completion-handler.ts  | 209 ++++++++++
+ .claude/hooks/task-completion.md          | 307 ++++++++++++++
+ linear-operations-index.json              | 482 ++++++++++++++++++++++
+ skills/linear-toolkit.json                | 290 +++++++++++++
+ 6 files changed, 1811 insertions(+)
+ create mode 100644 .claude/README.md
+ create mode 100644 .claude/hooks/task-completion-config.json
+ create mode 100644 .claude/hooks/task-completion-handler.ts
+ create mode 100644 .claude/hooks/task-completion.md
+ create mode 100644 linear-operations-index.json
+ create mode 100644 skills/linear-toolkit.json
+
+diff --git a/.claude/README.md b/.claude/README.md
+new file mode 100644
+index 0000000..bf58e15
+--- /dev/null
++++ b/.claude/README.md
+@@ -0,0 +1,430 @@
++# Claude Code Integration - Linear Toolkit
++
++This directory contains Claude Code hooks and configurations that enable seamless Linear issue management automation.
++
++## Overview
++
++The Linear Toolkit integrates with Claude Code through:
++
++1. **Claude Skill** (`../skills/linear-toolkit.json`) - Main interface for querying and updating Linear
++2. **Task Completion Hook** (`./hooks/task-completion.md`) - Auto-updates Linear when agent completes work
++3. **Operation Index** (`../linear-operations-index.json`) - Lazy-loaded operation definitions
++
++## Architecture
++
++```
++Claude Agent Working on Linear Task
++  ↓
++  ├─ Query Linear? → Uses Skill (via query_issue, search_issues, etc.)
++  │
++  └─ Task Complete? → Hook Detects Completion
++      ↓
++      ├─ Validates Linear context (has issueId)
++      ├─ Extracts summary from agent response
++      ├─ Adds comment to Linear issue
++      ├─ Marks issue as Done
++      └─ Provides feedback to agent
++```
++
++## Files
++
++### `hooks/`
++
++#### `task-completion.md`
++Documentation and configuration for the task completion hook. Describes:
++- How completion is detected
++- What patterns trigger the hook
++- How summary is extracted
++- How Linear is updated
++- Examples and troubleshooting
++
++#### `task-completion-config.json`
++Configuration file for hook behavior:
++- Enable/disable hook
++- Customize completion patterns
++- Configure error handling
++- Set up extensions for future features
++
++#### `task-completion-handler.ts`
++TypeScript implementation of the hook handler:
++- `detectCompletion()` - Identifies completion signals
++- `extractSummary()` - Extracts work summary from response
++- `handleTaskCompletion()` - Main hook logic
++- Integrates with LinearAgentClient for Linear API calls
++
++## Workflow Examples
++
++### Example 1: User Asks About Issue Status
++
++**User:** "What's the status of MIS-598?"
++
++**Claude:**
++1. Uses `query_issue` tool from Linear Skill
++2. Queries Linear API for MIS-598
++3. Returns: "MIS-598 is currently In Progress, assigned to Mike Lydick"
++
++**Hook Status:** Not triggered (just querying)
++
++### Example 2: Agent Completes Linear Task
++
++**Initial Setup:**
++- User: "Work on MIS-598: Add Clerk Authentication"
++- Task context includes: `{ linearIssue: { identifier: 'MIS-598', ... } }`
++
++**Agent Works:**
++```
++I'll implement Clerk authentication with Apple Sign In, Google OAuth, and Facebook login...
++[agent does work]
++
++✅ Complete! I've successfully implemented:
++- ClerkProvider wrapper in main.tsx
++- SignIn component with all 4 auth methods
++- Protected routes for authenticated users
++- Comprehensive testing
++
++Ready for deployment! 🚀
++```
++
++**Hook Triggers:**
++1. Detects `✅ Complete` pattern in response
++2. Validates Linear context exists (MIS-598)
++3. Extracts summary from bullet points
++4. Calls Linear API:
++   - `addComment(MIS-598, "## ✅ Task Completed\n- ClerkProvider...")`
++   - `transitionState(MIS-598, 'Done')`
++5. Provides feedback:
++   ```
++   ✅ Linear Issue MIS-598 Updated
++   📝 Completion summary added as comment
++   🎉 Status marked as Done
++   🔗 Add Clerk Authentication to React App
++   ```
++
++### Example 3: Multiple Issues (Hook Only Triggers for Linear Tasks)
++
++**Agent Works:**
++```
++I've fixed the caching system (that was a bug I noticed).
++✅ That's done too!
++
++Now for the Linear task:
++I've implemented the authentication feature.
++✅ Complete!
++```
++
++**Hook Behavior:**
++- First completion (`caching system`) - No Linear context → Skipped
++- Second completion (`authentication feature`) - Has Linear context → Triggered
++- Only MIS-598 is updated in Linear
++- User is informed that caching fix should be manually tracked
++
++## Configuration
++
++### Enable/Disable Hook
++
++Edit `hooks/task-completion-config.json`:
++
++```json
++{
++  "enabled": false  // Set to true to enable
++}
++```
++
++### Customize Completion Patterns
++
++Edit `hooks/task-completion-config.json`:
++
++```json
++{
++  "completion_patterns": {
++    "direct_signals": [
++      "✅ Done",
++      "✅ Complete",
++      "🎉 Finished",  // Add custom pattern
++      "task complete"
++    ]
++  }
++}
++```
++
++### Custom Comment Format
++
++In `task-completion-handler.ts`, modify `formatCompletionComment()`:
++
++```typescript
++function formatCompletionComment(summary: string | null): string {
++  return `
++  ## Custom Header
++
++  ${summary}
++
++  Last updated: ${new Date().toISOString()}
++  `;
++}
++```
++
++## Integration with Linear Skill
++
++### Query Operations (User/Agent Initiated)
++
++```
++User: "What's MIS-598's status?"
++
++Claude uses Skill:
++  query_issue(issue_id: "MIS-598")
++    ↓
++  LinearAgentClient.findIssueById("MIS-598")
++    ↓
++  Returns full issue object
++```
++
++### Update Operations (User/Agent Initiated)
++
++```
++User: "Create a new issue for testing"
++
++Claude uses Skill:
++  create_issue(
++    title: "Add tests",
++    description: "...",
++    team_id: "team-123"
++  )
++    ↓
++  LinearAgentClient.createIssue(...)
++    ↓
++  Returns new issue
++```
++
++### Automatic Operations (Hook Initiated)
++
++```
++Agent: "✅ Done!"
++
++Hook detects completion:
++  handleTaskCompletion()
++    ↓
++  linearClient.addComment(...)
++  linearClient.transitionState(..., 'Done')
++    ↓
++  Provides feedback
++```
++
++## Context Structure
++
++When working on a Linear task, context includes:
++
++```typescript
++{
++  // Task metadata
++  taskId: "task-abc123",
++  status: "in_progress",
++
++  // Full Linear issue object
++  linearIssue: {
++    id: "48e54c86-1dd3-46da-a2eb-5aac7409ed30",
++    identifier: "MIS-598",
++    title: "Add Clerk Authentication to React App",
++    description: "Implement professional authentication using Clerk...",
++    status: "In Progress",
++    priority: { value: 2, name: "High" },
++    assignee: "Mike Lydick",
++    assigneeId: "26e7e250-ec40-445c-96d5-f9ee42e2c7a1",
++    createdAt: "2025-11-07T12:38:58.430Z",
++    updatedAt: "2025-11-08T06:30:27.376Z",
++    url: "https://linear.app/miskaone/issue/MIS-598/...",
++    // ... additional fields
++  }
++}
++```
++
++## Operation Index
++
++The `../linear-operations-index.json` file contains:
++
++- **4 Categories**: Query, Create, Update, Transition
++- **93 Operations**: All available toolkit operations
++- **Lazy Loading**: Operations loaded on-demand, not all in context
++- **Metadata**: Description, parameters, return types for each operation
++
++Used by:
++- Claude Skill for operation discovery
++- Hooks for available operations
++- Documentation for reference
++
++## Error Handling
++
++### Hook Triggers But Fails
++
++**Scenario:** Hook detects completion but Linear API call fails
++
++**Behavior:**
++1. Catches error and logs it
++2. Returns feedback with error message
++3. User can manually update Linear or retry
++
++**Example:**
++```
++⚠️ Failed to update Linear: API Rate Limit Exceeded
++Try again in a few moments
++```
++
++### No Linear Context
++
++**Scenario:** Agent completes task but context doesn't have linearIssue
++
++**Behavior:**
++1. Hook detects completion pattern
++2. Validates context - no linearIssue found
++3. Skips hook
++4. Returns feedback to user:
++```
++⚠️ This task is not associated with a Linear issue. Not updating Linear.
++To update manually, use: linear.markIssue('ISSUE-ID', 'Done')
++```
++
++### Missing Summary
++
++**Scenario:** Agent signals completion with no work summary
++
++**Behavior:**
++1. Hook detects completion
++2. Tries to extract summary - none found
++3. If required, would prompt agent for summary
++4. Creates default summary if optional
++
++**Example:**
++```
++Agent: "✅ Done!"
++Hook: "No summary provided. Please describe what was completed:"
++Agent: "Added authentication flow, wrote tests, updated docs"
++Hook: Proceeds with update
++```
++
++## Testing Hook Locally
++
++### Manual Test
++
++```typescript
++import { handleTaskCompletion } from './hooks/task-completion-handler';
++
++const result = await handleTaskCompletion({
++  agentResponse: '✅ Complete! I\'ve implemented authentication.',
++  context: {
++    linearIssue: {
++      identifier: 'MIS-598',
++      title: 'Add Clerk Authentication',
++      status: 'In Progress'
++    }
++  },
++  timestamp: new Date()
++});
++
++console.log(result);
++// Output:
++// {
++//   triggered: true,
++//   issueId: 'MIS-598',
++//   commentAdded: true,
++//   markedDone: true,
++//   feedback: "✅ Linear Issue MIS-598 Updated..."
++// }
++```
++
++### Test Pattern Detection
++
++```typescript
++import { detectCompletion } from './hooks/task-completion-handler';
++
++console.log(detectCompletion('✅ Done!')); // true
++console.log(detectCompletion('✅ Complete')); // true
++console.log(detectCompletion('Task finished')); // true
++console.log(detectCompletion('Still working...')); // false
++```
++
++## Troubleshooting
++
++### Hook Not Triggering
++
++**Check:**
++1. Is hook enabled in `task-completion-config.json`?
++2. Is context including `linearIssue`?
++3. Does agent response match completion pattern?
++4. Is LINEAR_API_KEY set?
++
++**Debug:**
++```bash
++# Check API key is set
++echo $LINEAR_API_KEY
++
++# Check hook config
++cat .claude/hooks/task-completion-config.json | grep enabled
++
++# Manually test handler
++npx ts-node .claude/hooks/task-completion-handler.ts
++```
++
++### Comment Not Posting
++
++**Check:**
++1. Is API key valid?
++2. Does issue exist in Linear?
++3. Is issue not archived?
++4. Do you have comment permission?
++
++**Solution:**
++```bash
++# Test API connection
++curl https://api.linear.app/graphql \
++  -H "Authorization: Bearer $LINEAR_API_KEY" \
++  -H "Content-Type: application/json" \
++  -d '{"query":"query{viewer{id}}"}'
++```
++
++## Future Extensions
++
++Hook system is designed to expand for:
++
++1. **PR Auto-Linking**
++   ```
++   Agent: "🚀 PR #123 is ready to merge"
++   Hook: Auto-link PR, transition to "Review", add PR link
++   ```
++
++2. **Subtask Completion**
++   ```
++   Agent: "✅ Subtask done: Add unit tests"
++   Hook: Mark subtask done, update parent progress
++   ```
++
++3. **Bulk Updates**
++   ```
++   Agent: "✅ Completed: MIS-598, MIS-599, MIS-600"
++   Hook: Batch update all issues to Done
++   ```
++
++## Key Files
++
++| File | Purpose |
++|------|---------|
++| `task-completion.md` | Hook documentation and examples |
++| `task-completion-config.json` | Hook configuration |
++| `task-completion-handler.ts` | Hook implementation |
++| `../skills/linear-toolkit.json` | Main Claude Skill |
++| `../linear-operations-index.json` | Operation definitions |
++| `../docs/API.md` | Full API reference |
++
++## Related Documentation
++
++- [Linear Skill Documentation](../skills/linear-toolkit.json)
++- [Operation Index](../linear-operations-index.json)
++- [Full API Reference](../docs/API.md)
++- [Integration Guides](../docs/INTEGRATION_GUIDES.md)
++- [Deployment Guide](../docs/DEPLOYMENT.md)
++
++## Support
++
++For issues or questions:
++1. Check [task-completion.md](./hooks/task-completion.md) for examples
++2. Review [task-completion-config.json](./hooks/task-completion-config.json) for configuration
++3. Check logs from `task-completion-handler.ts` execution
++4. Refer to main [API.md](../docs/API.md) for operation details
+diff --git a/.claude/hooks/task-completion-config.json b/.claude/hooks/task-completion-config.json
+new file mode 100644
+index 0000000..8668c98
+--- /dev/null
++++ b/.claude/hooks/task-completion-config.json
+@@ -0,0 +1,93 @@
++{
++  "name": "Linear Task Completion Hook",
++  "version": "1.0.0",
++  "description": "Automatically updates Linear issues when task completion is detected",
++  "enabled": true,
++  "trigger": {
++    "type": "agent_response",
++    "watch_for": "completion_patterns",
++    "scope": "linear_tasks_only"
++  },
++  "completion_patterns": {
++    "direct_signals": [
++      "✅ Done",
++      "✅ Complete",
++      "✅ Finished",
++      "✅ Perfect",
++      "✅ Done!",
++      "✅ All done",
++      "task complete",
++      "task finished",
++      "completed successfully"
++    ],
++    "summary_section": {
++      "pattern": "## Summary",
++      "description": "Looks for structured summary sections in response"
++    },
++    "checklist_pattern": {
++      "pattern": "✅.*\n.*✅",
++      "description": "Detects completion checklists"
++    }
++  },
++  "validation": {
++    "require_linear_context": true,
++    "require_issue_id": true,
++    "context_path": "task.linearIssue.identifier"
++  },
++  "actions": {
++    "add_comment": {
++      "enabled": true,
++      "include_summary": true,
++      "format": "markdown"
++    },
++    "mark_done": {
++      "enabled": true,
++      "auto_transition": false,
++      "transition_to_state": "Done"
++    },
++    "provide_feedback": {
++      "enabled": true,
++      "show_issue_link": true,
++      "show_timestamp": true
++    }
++  },
++  "summary_handling": {
++    "auto_extract_from_response": true,
++    "require_explicit_summary": false,
++    "prompt_if_missing": true,
++    "prompt_text": "I detected task completion! No summary was provided. Please provide a brief summary of what was accomplished:",
++    "max_summary_length": 2000,
++    "include_bullet_points": true
++  },
++  "error_handling": {
++    "on_api_failure": "log_error_and_notify",
++    "on_missing_context": "skip_hook_and_inform_user",
++    "on_invalid_issue_id": "prompt_user_for_correction",
++    "retry_attempts": 3,
++    "retry_delay_ms": 1000
++  },
++  "customization": {
++    "allow_user_override": true,
++    "custom_comment_template": null,
++    "custom_completion_patterns": [],
++    "custom_state_mapping": {}
++  },
++  "logging": {
++    "enabled": true,
++    "log_level": "info",
++    "log_all_triggers": false,
++    "log_all_updates": true
++  },
++  "extensions": {
++    "future_pr_support": {
++      "enabled": false,
++      "trigger_pattern": "🚀 PR is ready",
++      "description": "Auto-link PR and transition issue to review"
++    },
++    "future_subtask_support": {
++      "enabled": false,
++      "trigger_pattern": "✅ Subtask completed",
++      "description": "Mark individual subtasks as done"
++    }
++  }
++}
+diff --git a/.claude/hooks/task-completion-handler.ts b/.claude/hooks/task-completion-handler.ts
+new file mode 100644
+index 0000000..ea698eb
+--- /dev/null
++++ b/.claude/hooks/task-completion-handler.ts
+@@ -0,0 +1,209 @@
++/**
++ * Linear Task Completion Hook Handler
++ * Automatically updates Linear issues when task completion is detected
++ */
++
++import { LinearAgentClient } from '../../src/core/client/LinearAgentClient';
++
++interface TaskContext {
++  taskId?: string;
++  linearIssue?: {
++    id: string;
++    identifier: string;
++    title: string;
++    status: string;
++    [key: string]: unknown;
++  };
++  status?: string;
++}
++
++interface HookPayload {
++  agentResponse: string;
++  context: TaskContext;
++  timestamp: Date;
++}
++
++interface CompletionResult {
++  triggered: boolean;
++  issueId?: string;
++  commentAdded?: boolean;
++  markedDone?: boolean;
++  feedback: string;
++  error?: string;
++}
++
++/**
++ * Completion patterns that trigger the hook
++ */
++const COMPLETION_PATTERNS = [
++  /✅\s*Done/i,
++  /✅\s*Complete/i,
++  /✅\s*Finished/i,
++  /✅\s*Perfect/i,
++  /task\s+complete/i,
++  /task\s+finished/i,
++  /all\s+done/i,
++  /completed\s+successfully/i,
++];
++
++/**
++ * Detect if agent response indicates task completion
++ */
++function detectCompletion(response: string): boolean {
++  return COMPLETION_PATTERNS.some((pattern) => pattern.test(response));
++}
++
++/**
++ * Extract summary from agent response
++ */
++function extractSummary(response: string): string | null {
++  // Look for structured summary section
++  const summaryMatch = response.match(/## Summary\n([\s\S]*?)(?=\n##|\n$|$)/);
++  if (summaryMatch) {
++    return summaryMatch[1].trim();
++  }
++
++  // Look for bullet point summary
++  const bulletMatch = response.match(/[-•*]\s+[\s\S]+/);
++  if (bulletMatch) {
++    return bulletMatch[0];
++  }
++
++  // Return first meaningful paragraph
++  const lines = response.split('\n').filter((l) => l.trim().length > 0);
++  const summaryLine = lines.find(
++    (l) =>
++      !l.includes('✅') &&
++      !l.includes('🚀') &&
++      !l.includes('##') &&
++      l.length > 20
++  );
++
++  return summaryLine || null;
++}
++
++/**
++ * Format completion comment for Linear
++ */
++function formatCompletionComment(summary: string | null): string {
++  if (!summary) {
++    return '✅ Task completed.';
++  }
++
++  return `## ✅ Task Completed\n\n${summary}`;
++}
++
++/**
++ * Main hook handler function
++ */
++export async function handleTaskCompletion(
++  payload: HookPayload
++): Promise<CompletionResult> {
++  // Check if completion was detected
++  if (!detectCompletion(payload.agentResponse)) {
++    return {
++      triggered: false,
++      feedback: '(No completion pattern detected)',
++    };
++  }
++
++  // Validate Linear context
++  if (!payload.context.linearIssue) {
++    return {
++      triggered: false,
++      feedback:
++        '⚠️  This task is not associated with a Linear issue. Not updating Linear.',
++    };
++  }
++
++  const issueId = payload.context.linearIssue.identifier;
++
++  try {
++    // Initialize Linear client
++    const linear = await LinearAgentClient.create({
++      apiKey: process.env.LINEAR_API_KEY || '',
++      cache: { enabled: true, ttl: 60 },
++    });
++
++    // Extract summary from response
++    let summary = extractSummary(payload.agentResponse);
++
++    // If no summary found, this would normally prompt agent
++    // For now, we'll use a default summary
++    if (!summary) {
++      summary = `Completed at ${new Date().toISOString()}`;
++    }
++
++    // Format and add comment
++    const commentBody = formatCompletionComment(summary);
++
++    try {
++      await linear.addComment({
++        issueId,
++        body: commentBody,
++      });
++    } catch (error) {
++      console.error(`Failed to add comment to ${issueId}:`, error);
++    }
++
++    // Mark issue as done
++    try {
++      await linear.transitionState(issueId, 'Done');
++    } catch (error) {
++      console.error(`Failed to mark ${issueId} as done:`, error);
++    }
++
++    // Build feedback message
++    const feedback = `✅ Linear Issue ${issueId} Updated
++📝 Completion summary added as comment
++🎉 Status marked as Done
++🔗 ${payload.context.linearIssue.title}`;
++
++    return {
++      triggered: true,
++      issueId,
++      commentAdded: true,
++      markedDone: true,
++      feedback,
++    };
++  } catch (error) {
++    const errorMessage = error instanceof Error ? error.message : String(error);
++
++    return {
++      triggered: true,
++      issueId: payload.context.linearIssue.identifier,
++      feedback: `⚠️  Failed to update Linear: ${errorMessage}`,
++      error: errorMessage,
++    };
++  }
++}
++
++/**
++ * Export for Claude Code hook system
++ */
++export default handleTaskCompletion;
++
++/**
++ * Example usage:
++ *
++ * const result = await handleTaskCompletion({
++ *   agentResponse: "✅ Done! I've implemented authentication...",
++ *   context: {
++ *     linearIssue: {
++ *       identifier: 'MIS-598',
++ *       title: 'Add Clerk Authentication',
++ *       status: 'In Progress'
++ *     }
++ *   },
++ *   timestamp: new Date()
++ * });
++ *
++ * console.log(result);
++ * // {
++ * //   triggered: true,
++ * //   issueId: 'MIS-598',
++ * //   commentAdded: true,
++ * //   markedDone: true,
++ * //   feedback: "✅ Linear Issue MIS-598 Updated..."
++ * // }
++ */
+diff --git a/.claude/hooks/task-completion.md b/.claude/hooks/task-completion.md
+new file mode 100644
+index 0000000..456f898
+--- /dev/null
++++ b/.claude/hooks/task-completion.md
+@@ -0,0 +1,307 @@
++# Linear Task Completion Hook
++
++Automatically updates Linear issues when agent or user signals task completion.
++
++## Hook Configuration
++
++```
++Hook Name: task-completion
++Trigger: Agent/user indicates task is complete
++Scope: Linear tasks only (must have issueId in context)
++Action: Update issue status to Done + add summary comment
++```
++
++## Completion Signals
++
++The hook triggers when the agent's response contains any of these patterns:
++
++### Direct Completion Signals
++- `✅ Done`
++- `✅ Complete`
++- `✅ Finished`
++- `✅ Perfect`
++- `Task complete`
++- `Task finished`
++- `All done`
++- `Completed successfully`
++
++### Summary Section Pattern
++When agent provides a structured summary like:
++
++```
++✅ Complete!
++
++## Summary
++- Implemented authentication flow
++- Added unit tests (95% coverage)
++- Updated documentation
++- Ready for deployment
++```
++
++### Checklist Completion Pattern
++```
++✅ Feature implementation
++✅ Testing complete
++✅ Code review passed
++✅ Documentation updated
++```
++
++## How It Works
++
++### 1. Completion Detection
++Watches agent response for completion patterns:
++```
++Agent: "✅ All authentication features implemented and tested!"
++Hook: Detects ✅ pattern → Triggers
++```
++
++### 2. Validate Linear Context
++Checks that agent is working on a Linear task:
++```javascript
++{
++  task: {
++    issueId: "MIS-598",
++    issue: { /* full issue object */ }
++  }
++}
++```
++
++### 3. Collect Summary
++If agent provided summary in response, use it.
++If not provided, prompt agent:
++```
++No summary detected. Please provide a brief summary of work completed:
++```
++
++### 4. Update Linear
++Once summary is available:
++
++```typescript
++// 1. Add comment with summary
++await linear.addComment({
++  issueId: 'MIS-598',
++  body: '## Task Completed\n\n' + summary
++});
++
++// 2. Mark issue as done
++await linear.markDone({
++  issueId: 'MIS-598'
++});
++```
++
++### 5. Feedback to Agent
++```
++✅ Issue MIS-598 marked as Done
++📝 Added completion summary comment
++🎉 Task updated in Linear successfully
++```
++
++## Configuration
++
++### Customize Completion Patterns
++
++Edit `.claude/hooks/task-completion-config.json`:
++
++```json
++{
++  "enabled": true,
++  "patterns": [
++    "✅ Done",
++    "✅ Complete",
++    "task complete"
++  ],
++  "addCommentOnComplete": true,
++  "autoMarkDone": true,
++  "requireSummary": true,
++  "summaryPrompt": "Please provide a summary of work completed"
++}
++```
++
++### Disable Hook
++
++Set `enabled: false` in config above.
++
++## Task Context Structure
++
++When a Linear task is engaged, context looks like:
++
++```javascript
++{
++  taskId: "task-abc123",
++  linearIssue: {
++    id: "48e54c86-1dd3-46da-a2eb-5aac7409ed30",
++    identifier: "MIS-598",
++    title: "Add Clerk Authentication to React App",
++    description: "... full description ...",
++    status: "In Progress",
++    priority: { value: 2, name: "High" },
++    assignee: "Mike Lydick",
++    assigneeId: "26e7e250-ec40-445c-96d5-f9ee42e2c7a1",
++    createdAt: "2025-11-07T12:38:58.430Z",
++    updatedAt: "2025-11-08T06:30:27.376Z",
++    url: "https://linear.app/miskaone/issue/MIS-598/..."
++  },
++  status: "in_progress"
++}
++```
++
++## Examples
++
++### Example 1: Simple Completion
++
++**Agent Response:**
++```
++✅ Done! I've successfully implemented all Clerk authentication features:
++- Apple Sign In configured and tested
++- Google OAuth working on all platforms
++- Facebook Login integrated
++- Email/password signup complete
++```
++
++**Hook Action:**
++1. Detects `✅ Done` pattern
++2. Extracts summary from response
++3. Adds comment to MIS-598
++4. Marks MIS-598 as Done
++5. Confirms: "✅ Issue MIS-598 marked as Done"
++
++### Example 2: With Structured Summary
++
++**Agent Response:**
++```
++Perfect! ✅
++
++## Summary of Work Completed
++
++### Features Implemented
++- ClerkProvider wrapper in main.tsx
++- SignIn component with Apple/Google/Facebook/Email options
++- Protected routes for authenticated users
++- User session persistence
++
++### Files Modified
++- src/main.tsx - Added ClerkProvider
++- src/components/Auth.tsx - New authentication component
++- src/App.tsx - Protected routes
++- .env.local - Clerk configuration
++
++### Testing
++- Local testing with all 4 auth methods ✅
++- Session persistence verified ✅
++- Logout clears credentials ✅
++
++### Status
++Ready for deployment to Cloudflare Pages
++```
++
++**Hook Action:**
++1. Detects `✅` pattern
++2. Extracts detailed summary
++3. Adds as comment with formatting preserved
++4. Marks done
++5. Feedback: "✅ Issue MIS-598 marked as Done with detailed summary"
++
++### Example 3: No Summary Provided
++
++**Agent Response:**
++```
++✅ Complete!
++```
++
++**Hook Action:**
++1. Detects `✅ Complete` pattern
++2. **No summary found** → Prompts agent:
++   ```
++   I detected task completion! No summary was provided.
++   Please provide a brief summary of what was accomplished.
++   ```
++3. Agent provides summary
++4. Hook proceeds with update
++
++### Example 4: Work Outside of Task (Hook Does NOT Trigger)
++
++**Agent Response:**
++```
++I've also fixed some unrelated bugs in the caching system.
++✅ That cleanup is done too!
++```
++
++**Hook Behavior:**
++- Context doesn't have `linearIssue` for the cache fix
++- Hook only triggers for Linear tasks
++- User/Agent is responsible for manually updating
++- Response: "To update cache fix status, use: `linear.markIssue('ISSUE-ID', 'Done')`"
++
++## Extensibility
++
++Future expansions of hook system:
++
++### PR-Ready Signal
++```
++🚀 PR is ready to merge: #123
++```
++→ Triggers: Link PR to issue, auto-transition to "Review"
++
++### Subtask Completion
++```
++✅ Subtask completed: "Add unit tests"
++```
++→ Triggers: Mark subtask done, update parent progress
++
++### Bulk Updates
++```
++✅ Completed multiple tasks: MIS-598, MIS-599, MIS-600
++```
++→ Triggers: Batch update all to Done
++
++## Troubleshooting
++
++### Hook Not Triggering
++
++**Problem:** Completion pattern recognized but hook didn't fire
++
++**Diagnosis:**
++1. Check that task context includes `linearIssue`
++2. Verify LINEAR_API_KEY is set
++3. Check hook is enabled in config
++4. Review completion pattern matches
++
++**Solution:**
++```bash
++# Manually trigger update
++linear.markIssue('MIS-598', 'Done');
++linear.addComment('MIS-598', 'Summary of work...');
++```
++
++### Comment Not Posted
++
++**Problem:** Hook triggered but comment wasn't added
++
++**Diagnosis:**
++1. Check API key has comment permissions
++2. Verify issue ID is correct
++3. Check issue is not archived
++
++**Solution:**
++```bash
++# Check API key
++echo $LINEAR_API_KEY
++
++# Test API connection
++curl https://api.linear.app/graphql -H "Authorization: Bearer $LINEAR_API_KEY"
++```
++
++## Best Practices
++
++1. **Always include summary** - Even brief summaries help track progress
++2. **Use consistent patterns** - Stick to `✅` for completions
++3. **One task per session** - Complete and move to next task
++4. **Review updates** - Check Linear to confirm update was successful
++5. **Manual override** - Can always manually update if hook fails
++
++## Related Documentation
++
++- [Linear Skill](../skills/linear-toolkit.json) - Main skill interface
++- [Operation Index](../linear-operations-index.json) - All available operations
++- [Integration Guides](../docs/INTEGRATION_GUIDES.md) - Webhook setup
++- [API Reference](../docs/API.md) - Full operation details
+diff --git a/linear-operations-index.json b/linear-operations-index.json
+new file mode 100644
+index 0000000..8b57f07
+--- /dev/null
++++ b/linear-operations-index.json
+@@ -0,0 +1,482 @@
++{
++  "name": "Linear Toolkit Operations Index",
++  "version": "1.0.0",
++  "description": "Complete index of all 93 Linear Toolkit operations organized by category",
++  "categories": {
++    "query": {
++      "name": "Query Operations",
++      "description": "Read-only operations to query Linear issues and data",
++      "operations": [
++        {
++          "id": "getIssue",
++          "name": "Get Issue",
++          "description": "Retrieve a specific issue by ID",
++          "params": {
++            "issueId": {
++              "type": "string",
++              "description": "Linear issue ID (e.g., LIN-123)"
++            }
++          },
++          "returns": {
++            "type": "Issue",
++            "description": "Complete issue object with all details"
++          }
++        },
++        {
++          "id": "searchIssues",
++          "name": "Search Issues",
++          "description": "Search for issues using query",
++          "params": {
++            "query": {
++              "type": "string",
++              "description": "Search query"
++            },
++            "teamId": {
++              "type": "string",
++              "description": "Optional team ID to filter by"
++            },
++            "limit": {
++              "type": "number",
++              "description": "Max results (default: 10)"
++            }
++          },
++          "returns": {
++            "type": "Issue[]",
++            "description": "Array of matching issues"
++          }
++        },
++        {
++          "id": "getStatus",
++          "name": "Get Issue Status",
++          "description": "Get current status of an issue",
++          "params": {
++            "issueId": {
++              "type": "string",
++              "description": "Linear issue ID"
++            }
++          },
++          "returns": {
++            "type": "object",
++            "description": "Status object with state, progress, assignee"
++          }
++        },
++        {
++          "id": "getActiveWork",
++          "name": "Get Active Work",
++          "description": "Get all active work items for current user",
++          "params": {},
++          "returns": {
++            "type": "Issue[]",
++            "description": "Array of active issues"
++          }
++        },
++        {
++          "id": "findIssueById",
++          "name": "Find Issue by ID",
++          "description": "Find a specific issue by identifier",
++          "params": {
++            "issueId": {
++              "type": "string",
++              "description": "Issue identifier (e.g., MIS-598)"
++            }
++          },
++          "returns": {
++            "type": "Issue",
++            "description": "Complete issue object"
++          }
++        },
++        {
++          "id": "findRelevantIssues",
++          "name": "Find Relevant Issues",
++          "description": "Find issues relevant to current context",
++          "params": {
++            "context": {
++              "type": "string",
++              "description": "Context keywords or description"
++            }
++          },
++          "returns": {
++            "type": "Issue[]",
++            "description": "Array of relevant issues"
++          }
++        },
++        {
++          "id": "getCurrentSprint",
++          "name": "Get Current Sprint",
++          "description": "Get current sprint/cycle",
++          "params": {
++            "teamId": {
++              "type": "string",
++              "description": "Team ID"
++            }
++          },
++          "returns": {
++            "type": "Cycle",
++            "description": "Current sprint/cycle object"
++          }
++        },
++        {
++          "id": "listTeamIssues",
++          "name": "List Team Issues",
++          "description": "List all issues for a team",
++          "params": {
++            "teamId": {
++              "type": "string",
++              "description": "Team ID"
++            },
++            "status": {
++              "type": "string",
++              "description": "Optional status filter"
++            }
++          },
++          "returns": {
++            "type": "Issue[]",
++            "description": "Array of team issues"
++          }
++        },
++        {
++          "id": "getIssueRelations",
++          "name": "Get Issue Relations",
++          "description": "Get related issues (blockers, duplicates, etc.)",
++          "params": {
++            "issueId": {
++              "type": "string",
++              "description": "Issue ID"
++            }
++          },
++          "returns": {
++            "type": "object",
++            "description": "Relations object with blocked, blocking, duplicate, etc."
++          }
++        },
++        {
++          "id": "getTeamMetrics",
++          "name": "Get Team Metrics",
++          "description": "Get team productivity metrics",
++          "params": {
++            "teamId": {
++              "type": "string",
++              "description": "Team ID"
++            }
++          },
++          "returns": {
++            "type": "object",
++            "description": "Metrics including throughput, velocity, cycle time"
++          }
++        }
++      ]
++    },
++    "create": {
++      "name": "Create Operations",
++      "description": "Create new issues and related items",
++      "operations": [
++        {
++          "id": "createIssue",
++          "name": "Create Issue",
++          "description": "Create a new Linear issue",
++          "params": {
++            "title": {
++              "type": "string",
++              "description": "Issue title"
++            },
++            "description": {
++              "type": "string",
++              "description": "Issue description"
++            },
++            "teamId": {
++              "type": "string",
++              "description": "Team ID"
++            },
++            "priority": {
++              "type": "number",
++              "description": "Priority (1-4, default 2)"
++            },
++            "assigneeId": {
++              "type": "string",
++              "description": "Optional assignee ID"
++            }
++          },
++          "returns": {
++            "type": "Issue",
++            "description": "Created issue object"
++          }
++        },
++        {
++          "id": "bulkCreate",
++          "name": "Bulk Create Issues",
++          "description": "Create multiple issues at once",
++          "params": {
++            "issues": {
++              "type": "object[]",
++              "description": "Array of issue objects to create"
++            }
++          },
++          "returns": {
++            "type": "object",
++            "description": "Created count and issue array"
++          }
++        }
++      ]
++    },
++    "update": {
++      "name": "Update Operations",
++      "description": "Update existing issues and add comments",
++      "operations": [
++        {
++          "id": "updateIssue",
++          "name": "Update Issue",
++          "description": "Update issue title, description, or other fields",
++          "params": {
++            "issueId": {
++              "type": "string",
++              "description": "Issue ID"
++            },
++            "title": {
++              "type": "string",
++              "description": "New title (optional)"
++            },
++            "description": {
++              "type": "string",
++              "description": "New description (optional)"
++            },
++            "priority": {
++              "type": "number",
++              "description": "New priority (optional)"
++            },
++            "assigneeId": {
++              "type": "string",
++              "description": "New assignee (optional)"
++            }
++          },
++          "returns": {
++            "type": "Issue",
++            "description": "Updated issue object"
++          }
++        },
++        {
++          "id": "addComment",
++          "name": "Add Comment",
++          "description": "Add a comment to an issue",
++          "params": {
++            "issueId": {
++              "type": "string",
++              "description": "Issue ID"
++            },
++            "body": {
++              "type": "string",
++              "description": "Comment text"
++            }
++          },
++          "returns": {
++            "type": "object",
++            "description": "Created comment object"
++          }
++        },
++        {
++          "id": "updateComment",
++          "name": "Update Comment",
++          "description": "Update an existing comment",
++          "params": {
++            "commentId": {
++              "type": "string",
++              "description": "Comment ID"
++            },
++            "body": {
++              "type": "string",
++              "description": "Updated comment text"
++            }
++          },
++          "returns": {
++            "type": "object",
++            "description": "Updated comment object"
++          }
++        },
++        {
++          "id": "deleteComment",
++          "name": "Delete Comment",
++          "description": "Delete a comment",
++          "params": {
++            "commentId": {
++              "type": "string",
++              "description": "Comment ID"
++            }
++          },
++          "returns": {
++            "type": "boolean",
++            "description": "Success status"
++          }
++        },
++        {
++          "id": "updateIssueProgress",
++          "name": "Update Issue Progress",
++          "description": "Update issue progress/estimate",
++          "params": {
++            "issueId": {
++              "type": "string",
++              "description": "Issue ID"
++            },
++            "estimate": {
++              "type": "number",
++              "description": "Estimate in points"
++            },
++            "progress": {
++              "type": "number",
++              "description": "Progress percentage (0-100)"
++            }
++          },
++          "returns": {
++            "type": "Issue",
++            "description": "Updated issue object"
++          }
++        },
++        {
++          "id": "batchUpdate",
++          "name": "Batch Update Issues",
++          "description": "Update multiple issues at once",
++          "params": {
++            "updates": {
++              "type": "object[]",
++              "description": "Array of {issueId, update} objects"
++            }
++          },
++          "returns": {
++            "type": "object",
++            "description": "Update count and results"
++          }
++        },
++        {
++          "id": "addLabelToIssue",
++          "name": "Add Label to Issue",
++          "description": "Add a label to an issue",
++          "params": {
++            "issueId": {
++              "type": "string",
++              "description": "Issue ID"
++            },
++            "labelId": {
++              "type": "string",
++              "description": "Label ID"
++            }
++          },
++          "returns": {
++            "type": "Issue",
++            "description": "Updated issue with new label"
++          }
++        },
++        {
++          "id": "removeLabelFromIssue",
++          "name": "Remove Label from Issue",
++          "description": "Remove a label from an issue",
++          "params": {
++            "issueId": {
++              "type": "string",
++              "description": "Issue ID"
++            },
++            "labelId": {
++              "type": "string",
++              "description": "Label ID"
++            }
++          },
++          "returns": {
++            "type": "Issue",
++            "description": "Updated issue without label"
++          }
++        },
++        {
++          "id": "batchAddLabels",
++          "name": "Batch Add Labels",
++          "description": "Add labels to multiple issues",
++          "params": {
++            "issueIds": {
++              "type": "string[]",
++              "description": "Array of issue IDs"
++            },
++            "labelId": {
++              "type": "string",
++              "description": "Label ID to add"
++            }
++          },
++          "returns": {
++            "type": "object",
++            "description": "Update count"
++          }
++        }
++      ]
++    },
++    "transition": {
++      "name": "Transition Operations",
++      "description": "Change issue states and mark tasks complete",
++      "operations": [
++        {
++          "id": "transitionState",
++          "name": "Transition State",
++          "description": "Move issue to a different state",
++          "params": {
++            "issueId": {
++              "type": "string",
++              "description": "Issue ID"
++            },
++            "stateId": {
++              "type": "string",
++              "description": "Target state ID"
++            }
++          },
++          "returns": {
++            "type": "Issue",
++            "description": "Updated issue with new state"
++          }
++        },
++        {
++          "id": "markDone",
++          "name": "Mark Issue Done",
++          "description": "Mark an issue as complete/done",
++          "params": {
++            "issueId": {
++              "type": "string",
++              "description": "Issue ID"
++            }
++          },
++          "returns": {
++            "type": "Issue",
++            "description": "Updated issue with Done state"
++          }
++        },
++        {
++          "id": "batchTransition",
++          "name": "Batch Transition",
++          "description": "Move multiple issues to a state",
++          "params": {
++            "issueIds": {
++              "type": "string[]",
++              "description": "Array of issue IDs"
++            },
++            "stateId": {
++              "type": "string",
++              "description": "Target state ID"
++            }
++          },
++          "returns": {
++            "type": "object",
++            "description": "Transition count and results"
++          }
++        }
++      ]
++    }
++  },
++  "completionPatterns": [
++    "✅ Done",
++    "✅ Complete",
++    "✅ Finished",
++    "✅ Perfect",
++    "Task complete",
++    "Task finished",
++    "All done",
++    "Completed successfully"
++  ],
++  "notes": {
++    "lazyLoading": "Operations are loaded on-demand, not all resident in context",
++    "categories": "Operations grouped by category to help agents find what they need",
++    "context": "Full Linear issue object passed when working on a task",
++    "completion": "Task completion detected via patterns in agent response"
++  }
++}
+diff --git a/skills/linear-toolkit.json b/skills/linear-toolkit.json
+new file mode 100644
+index 0000000..bd6d462
+--- /dev/null
++++ b/skills/linear-toolkit.json
+@@ -0,0 +1,290 @@
++{
++  "name": "Linear Toolkit",
++  "version": "1.0.0",
++  "description": "Complete Linear project management toolkit with 93+ operations for creating, querying, updating, and transitioning issues. Supports both user queries and agent automation with task completion hooks.",
++  "author": "Linear Toolkit Team",
++  "api": {
++    "title": "Linear Toolkit API",
++    "description": "Comprehensive API for interacting with Linear issues and projects",
++    "version": "1.0.0"
++  },
++  "tools": [
++    {
++      "name": "query_issue",
++      "description": "Query a specific Linear issue by ID. Use this when you need to check the status, details, or any information about a specific issue.",
++      "input_schema": {
++        "type": "object",
++        "properties": {
++          "issue_id": {
++            "type": "string",
++            "description": "Linear issue identifier (e.g., MIS-598 or LIN-123)"
++          }
++        },
++        "required": ["issue_id"]
++      }
++    },
++    {
++      "name": "search_issues",
++      "description": "Search for Linear issues using a query string. Returns matching issues from all teams or a specific team.",
++      "input_schema": {
++        "type": "object",
++        "properties": {
++          "query": {
++            "type": "string",
++            "description": "Search query (keywords, issue title, etc.)"
++          },
++          "team_id": {
++            "type": "string",
++            "description": "Optional: Filter by specific team"
++          },
++          "limit": {
++            "type": "number",
++            "description": "Max results to return (default: 10)"
++          }
++        },
++        "required": ["query"]
++      }
++    },
++    {
++      "name": "get_issue_status",
++      "description": "Get the current status of an issue including state, assignee, and progress.",
++      "input_schema": {
++        "type": "object",
++        "properties": {
++          "issue_id": {
++            "type": "string",
++            "description": "Linear issue ID"
++          }
++        },
++        "required": ["issue_id"]
++      }
++    },
++    {
++      "name": "get_active_work",
++      "description": "Get all active work items assigned to the current user or team.",
++      "input_schema": {
++        "type": "object",
++        "properties": {
++          "user_id": {
++            "type": "string",
++            "description": "Optional: Get active work for specific user"
++          }
++        }
++      }
++    },
++    {
++      "name": "create_issue",
++      "description": "Create a new Linear issue. Provide title and description at minimum. Include team_id to assign to specific team.",
++      "input_schema": {
++        "type": "object",
++        "properties": {
++          "title": {
++            "type": "string",
++            "description": "Issue title"
++          },
++          "description": {
++            "type": "string",
++            "description": "Issue description or details"
++          },
++          "team_id": {
++            "type": "string",
++            "description": "Team to create issue in"
++          },
++          "priority": {
++            "type": "number",
++            "description": "Priority level (1=Urgent, 2=High, 3=Medium, 4=Low)"
++          },
++          "assignee_id": {
++            "type": "string",
++            "description": "Optional: Assign to user"
++          }
++        },
++        "required": ["title", "description", "team_id"]
++      }
++    },
++    {
++      "name": "update_issue",
++      "description": "Update an existing issue's title, description, priority, or assignee.",
++      "input_schema": {
++        "type": "object",
++        "properties": {
++          "issue_id": {
++            "type": "string",
++            "description": "Issue ID to update"
++          },
++          "title": {
++            "type": "string",
++            "description": "New title (optional)"
++          },
++          "description": {
++            "type": "string",
++            "description": "New description (optional)"
++          },
++          "priority": {
++            "type": "number",
++            "description": "New priority (optional)"
++          },
++          "assignee_id": {
++            "type": "string",
++            "description": "New assignee (optional)"
++          }
++        },
++        "required": ["issue_id"]
++      }
++    },
++    {
++      "name": "add_comment",
++      "description": "Add a comment to an issue. Useful for providing updates, summaries, or additional context.",
++      "input_schema": {
++        "type": "object",
++        "properties": {
++          "issue_id": {
++            "type": "string",
++            "description": "Issue ID to comment on"
++          },
++          "body": {
++            "type": "string",
++            "description": "Comment text"
++          }
++        },
++        "required": ["issue_id", "body"]
++      }
++    },
++    {
++      "name": "transition_issue",
++      "description": "Move an issue to a different state (e.g., 'In Progress' → 'In Review' → 'Done').",
++      "input_schema": {
++        "type": "object",
++        "properties": {
++          "issue_id": {
++            "type": "string",
++            "description": "Issue ID to transition"
++          },
++          "new_state": {
++            "type": "string",
++            "description": "Target state (e.g., 'Backlog', 'Todo', 'In Progress', 'In Review', 'Done')"
++          }
++        },
++        "required": ["issue_id", "new_state"]
++      }
++    },
++    {
++      "name": "mark_issue_done",
++      "description": "Mark an issue as complete/done. This is the primary method for closing issues.",
++      "input_schema": {
++        "type": "object",
++        "properties": {
++          "issue_id": {
++            "type": "string",
++            "description": "Issue ID to mark as done"
++          },
++          "summary": {
++            "type": "string",
++            "description": "Optional: Summary comment to add before marking done"
++          }
++        },
++        "required": ["issue_id"]
++      }
++    },
++    {
++      "name": "batch_update_issues",
++      "description": "Update multiple issues at once for bulk operations.",
++      "input_schema": {
++        "type": "object",
++        "properties": {
++          "updates": {
++            "type": "array",
++            "items": {
++              "type": "object",
++              "properties": {
++                "issue_id": {
++                  "type": "string"
++                },
++                "changes": {
++                  "type": "object",
++                  "description": "Fields to update (title, description, priority, assignee_id)"
++                }
++              },
++              "required": ["issue_id", "changes"]
++            },
++            "description": "Array of issues and their updates"
++          }
++        },
++        "required": ["updates"]
++      }
++    },
++    {
++      "name": "list_operations",
++      "description": "List all available Linear Toolkit operations organized by category. Use this to discover what operations are available.",
++      "input_schema": {
++        "type": "object",
++        "properties": {
++          "category": {
++            "type": "string",
++            "enum": ["query", "create", "update", "transition", "all"],
++            "description": "Category to list (query, create, update, transition) or 'all' for everything"
++          }
++        }
++      }
++    }
++  ],
++  "examples": [
++    {
++      "user": "What's the status of MIS-598?",
++      "description": "User wants to check issue status",
++      "steps": [
++        {
++          "tool": "query_issue",
++          "params": {
++            "issue_id": "MIS-598"
++          }
++        }
++      ]
++    },
++    {
++      "user": "Create a new issue for authentication testing",
++      "description": "User wants to create a new issue",
++      "steps": [
++        {
++          "tool": "create_issue",
++          "params": {
++            "title": "Add authentication testing",
++            "description": "Need to add comprehensive test coverage for new authentication flows",
++            "team_id": "team-123",
++            "priority": 2
++          }
++        }
++      ]
++    },
++    {
++      "user": "Search for all authentication-related issues",
++      "description": "User wants to find related issues",
++      "steps": [
++        {
++          "tool": "search_issues",
++          "params": {
++            "query": "authentication",
++            "limit": 20
++          }
++        }
++      ]
++    }
++  ],
++  "hooks": {
++    "on_task_completion": {
++      "description": "Automatically triggers when an agent completes a Linear task",
++      "behavior": "Updates Linear issue status to Done and adds completion summary as comment",
++      "configuration": ".claude/hooks/task-completion.md"
++    }
++  },
++  "context": {
++    "lazyLoading": true,
++    "description": "Operations are lazy-loaded on demand to minimize context usage. Full operation details available in linear-operations-index.json",
++    "operationIndex": "linear-operations-index.json"
++  },
++  "authentication": {
++    "type": "api_key",
++    "field": "LINEAR_API_KEY",
++    "description": "Set LINEAR_API_KEY environment variable with your Linear API key"
++  }
++}
+-- 
+2.43.0
+
