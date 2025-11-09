@@ -231,12 +231,11 @@ await gitModule.execute('linkCommitToIssues', {
   }
 
   private async linkCommitToIssues(params: Record<string, unknown>): Promise<{ linked: number; issues: string[] }> {
-    const { commitHash, repositoryUrl, repositoryName, commitMessage, files } = params as {
+    const { commitHash, repositoryUrl, repositoryName, commitMessage } = params as {
       commitHash: string;
       repositoryUrl?: string;
       repositoryName?: string;
       commitMessage: string;
-      files: string[];
     };
 
     try {
