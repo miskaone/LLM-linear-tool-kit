@@ -115,9 +115,12 @@ const ToolkitConfigSchema = z.object({
 export type ToolkitConfig = z.infer<typeof ToolkitConfigSchema>;
 
 /**
- * Parse and validate configuration from environment variables
- * @returns Validated ToolkitConfig object
- * @throws {z.ZodError} If configuration validation fails
+ * Load configuration from environment variables and validate it against the ToolkitConfigSchema.
+ *
+ * Parses relevant environment variables into a configuration object, removes undefined values so schema defaults apply, and validates the assembled configuration.
+ *
+ * @returns The validated ToolkitConfig
+ * @throws Error When configuration validation fails; the error message lists validation failures by field.
  */
 export function loadConfig(): ToolkitConfig {
   const config = {
