@@ -97,12 +97,6 @@ export class GitIntegration extends BaseModule {
             required: true,
             description: 'Commit message',
           },
-          files: {
-            name: 'files',
-            type: 'array',
-            required: true,
-            description: 'Changed files',
-          },
         },
         this.linkCommitToIssues.bind(this),
         `
@@ -110,16 +104,14 @@ export class GitIntegration extends BaseModule {
 await gitModule.execute('linkCommitToIssues', {
   commitHash: 'abc123',
   repositoryName: 'backend',
-  commitMessage: 'Fix auth - closes LIN-123',
-  files: ['src/auth.ts']
+  commitMessage: 'Fix auth - closes LIN-123'
 });
 
 // Per-repo mode (explicit URL):
 await gitModule.execute('linkCommitToIssues', {
   commitHash: 'abc123',
   repositoryUrl: 'https://github.com/org/repo',
-  commitMessage: 'Fix auth - closes LIN-123',
-  files: ['src/auth.ts']
+  commitMessage: 'Fix auth - closes LIN-123'
 });
         `
       )
@@ -231,12 +223,11 @@ await gitModule.execute('linkCommitToIssues', {
   }
 
   private async linkCommitToIssues(params: Record<string, unknown>): Promise<{ linked: number; issues: string[] }> {
-    const { commitHash, repositoryUrl, repositoryName, commitMessage, files } = params as {
+    const { commitHash, repositoryUrl, repositoryName, commitMessage } = params as {
       commitHash: string;
       repositoryUrl?: string;
       repositoryName?: string;
       commitMessage: string;
-      files: string[];
     };
 
     try {
